@@ -1,0 +1,131 @@
+{
+  "source": "code-archive (cozy-desktop-corner-nov-24-2026-4-28-55-pm.zip): Sparkle desktop app, a Lovable TanStack Start project on its own Lovable Cloud backend (old project 17374d52-88ca-4dc4-b0ee-b08a261e9aec)",
+  "capabilities": [
+    {
+      "capability": "code",
+      "source": "src/ (src/sparkle app, routes, shadcn ui, lib)",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "none \u2014 desktop, setup screen and sign-in screen load"
+    },
+    {
+      "capability": "styles",
+      "source": "src/styles.css",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "assets (public files)",
+      "source": "public/ (icons, logos, banners, sounds, small images)",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "none \u2014 193 files copied; 3 unused 4K duplicates skipped"
+    },
+    {
+      "capability": "assets (large media)",
+      "source": "4K wallpapers in public/assets/aistudio, boot video and 13 asset pointers hosted by the old project",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "none \u2014 17 files re-uploaded to this project; boot video now uses the working copy"
+    },
+    {
+      "capability": "schema",
+      "source": "none (empty drizzle schema, no migrations)",
+      "outcome": "not-applicable",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "records",
+      "source": "none server-side; notes, gallery, settings live in each browser's storage",
+      "outcome": "not-applicable",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "auth",
+      "source": "Lovable Cloud auth: email/password, password reset, Google, Apple, Microsoft",
+      "outcome": "migrate",
+      "status": "pending",
+      "next_action": "email/password, Google, Apple, Microsoft enabled; sign-in form reaches this Cloud (wrong password rejected). Full sign-in not exercised: user declined a test account"
+    },
+    {
+      "capability": "auth identities (users)",
+      "source": "old Cloud auth.users (no export attached)",
+      "outcome": "migrate",
+      "status": "pending",
+      "next_action": "request user export (emails + original IDs) after preview"
+    },
+    {
+      "capability": "authorization",
+      "source": "none (no roles or server data)",
+      "outcome": "not-applicable",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "uploaded file bytes",
+      "source": "none server-side (Gallery uses IndexedDB)",
+      "outcome": "not-applicable",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "public endpoint /api/spotlight-wallpapers",
+      "source": "src/server.ts + src/lib/spotlight-wallpapers.ts",
+      "outcome": "preserve",
+      "status": "verified",
+      "next_action": "none \u2014 returns JSON"
+    },
+    {
+      "capability": "external providers",
+      "source": "client-side EPG, weather, HLS streams, Photopea/YouTube embeds, windows10spotlight.com",
+      "outcome": "preserve",
+      "status": "verified",
+      "next_action": "none \u2014 wallpaper feed loads"
+    },
+    {
+      "capability": "schedules/webhooks",
+      "source": "cron-auth helper only, no cron routes",
+      "outcome": "not-applicable",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "secrets",
+      "source": "only Cloud-managed SUPABASE_* / LOVABLE_CRON_* names",
+      "outcome": "not-applicable",
+      "status": "verified",
+      "next_action": "none \u2014 provided by this project's Cloud"
+    },
+    {
+      "capability": "metadata",
+      "source": "src/sparkle/meta.ts, route head()",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "none"
+    },
+    {
+      "capability": "tests",
+      "source": "app-routing, pinStore, viveFeatures, startForYouSuggestions, useRealtimeWeather tests",
+      "outcome": "migrate",
+      "status": "verified",
+      "next_action": "none \u2014 14 tests pass"
+    },
+    {
+      "capability": "cutover",
+      "source": "old published app",
+      "outcome": "migrate",
+      "status": "pending",
+      "next_action": "publish this project once users are imported"
+    },
+    {
+      "capability": "verification",
+      "source": "-",
+      "outcome": "migrate",
+      "status": "pending",
+      "next_action": "build fixed (damaged emoji character repaired, typecheck clean); imported-user first login waits on user export"
+    }
+  ]
+}
