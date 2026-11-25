@@ -556,7 +556,7 @@ export function buildStartForYouSuggestions({
     id: `fy-gal-img-${item.id}`,
     kind: "gallery",
     title: item.title,
-    subtitle: item.dateLabel ? `Gallery · ${item.dateLabel}` : "Gallery",
+    subtitle: item.dateLabel ? `Photos Gallery · ${item.dateLabel}` : "Photos Gallery",
     imageUrl: item.thumbnailUrl || item.url,
     isContainImage: false,
     dragPayload: {

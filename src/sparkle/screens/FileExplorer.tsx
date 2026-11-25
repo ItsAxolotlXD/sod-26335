@@ -56,6 +56,7 @@ import {
   Star,
   Download,
   FileArchive,
+  RotateCcw,
 } from "lucide-react";
 import { FILE_EXPLORER_ICON_URL } from "../components/Fluent3DIcons";
 import { FluentHomeIcon, FluentSearchIcon, FluentSettingsIcon } from "../components/FluentIcons";
@@ -80,7 +81,17 @@ import {
   type SodiumDragPayload,
   type DeviceDropTreeNode,
 } from "../utils/sodiumDragData";
-import { loadDesktopIcons } from "../services/desktopStore";
+import {
+  emptyRecycleTrash,
+  loadDesktopIcons,
+  loadRecycleTrash,
+  permanentlyDeleteTrashItem,
+  RECYCLE_TRASH_KEY,
+  RECYCLE_TRASH_UPDATED_EVENT,
+  restoreAllRecycleTrash,
+  restoreFromRecycleTrash,
+  type RecycleTrashItem,
+} from "../services/desktopStore";
 
 interface FileExplorerProps {
   navigate?: (route: string, state?: any) => void;
@@ -211,6 +222,7 @@ interface DirectoryMeta {
     | "cloud"
     | "drive"
     | "folder"
+    | "recycle"
     | "settings";
 }
 
@@ -218,9 +230,9 @@ const CORE_DIRECTORIES: Record<string, DirectoryMeta> = {
   "dir-home": { id: "dir-home", name: "Home", parentId: null, pathLabel: "Home", icon: "home" },
   "dir-this-pc": {
     id: "dir-this-pc",
-    name: "This PC",
+    name: "Computer",
     parentId: "dir-home",
-    pathLabel: "This PC",
+    pathLabel: "Computer",
     icon: "pc",
   },
   "dir-gallery": {
@@ -320,6 +332,13 @@ const CORE_DIRECTORIES: Record<string, DirectoryMeta> = {
     parentId: "dir-home",
     pathLabel: "Settings",
     icon: "settings",
+  },
+  "dir-recycle-trash": {
+    id: "dir-recycle-trash",
+    name: "Recycle Trash",
+    parentId: "dir-home",
+    pathLabel: "Recycle Trash",
+    icon: "recycle",
   },
 };
 
@@ -1541,6 +1560,37 @@ const ExplorerSidebar3DIcon: React.FC<{
       </svg>
     );
   }
+  if (kind === "recycle") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={`fluent-3d-icon ${className} shrink-0`}>
+        <defs>
+          <linearGradient
+            id="fe_sb_recycle"
+            x1="4"
+            y1="5"
+            x2="20"
+            y2="21"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" stopColor="#E2E8F0" />
+            <stop offset="100%" stopColor="#94A3B8" />
+          </linearGradient>
+        </defs>
+        <rect x="6" y="4" width="12" height="2.4" rx="1" fill="#CBD5E1" />
+        <path
+          d="M5.5 6.5H18.5L17.3 20C17.2 20.8 16.5 21.3 15.7 21.3H8.3C7.5 21.3 6.8 20.8 6.7 20L5.5 6.5Z"
+          fill="url(#fe_sb_recycle)"
+        />
+        <path
+          d="M9.5 10V17.5M12 10V17.5M14.5 10V17.5"
+          stroke="#475569"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          opacity="0.6"
+        />
+      </svg>
+    );
+  }
   return <FluentFolder3D className={className} />;
 };
 
@@ -1968,6 +2018,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
   const [previewEntry, setPreviewEntry] = useState<ExplorerEntry | null>(null);
   const [editorText, setEditorText] = useState("");
   const [propertiesEntry, setPropertiesEntry] = useState<ExplorerEntry | null>(null);
+  const [recycleTrash, setRecycleTrash] = useState<RecycleTrashItem[]>(() => loadRecycleTrash());
 
   const fileUploadInputRef = useRef<HTMLInputElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -2032,6 +2083,19 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
       loadHtmlWriterFiles();
     }
   }, [needsHtmlSource, loadHtmlWriterFiles]);
+
+  useEffect(() => {
+    const syncTrash = () => setRecycleTrash(loadRecycleTrash());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === RECYCLE_TRASH_KEY) syncTrash();
+    };
+    window.addEventListener(RECYCLE_TRASH_UPDATED_EVENT, syncTrash);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(RECYCLE_TRASH_UPDATED_EVENT, syncTrash);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const unsub = galleryDB.subscribe(() => {
@@ -2116,7 +2180,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
         driveTotalGb: 222,
         sizeBytes: 222 * 1024 * 1024 * 1024,
         modifiedAt: Date.now() - 1000 * 60 * 5,
-        locationLabel: "This PC",
+        locationLabel: "Computer",
         pathLabel: "C:\\",
         status: "local",
         targetDirId: "dir-drive-c",
@@ -2132,7 +2196,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
         driveTotalGb: 931,
         sizeBytes: 931 * 1024 * 1024 * 1024,
         modifiedAt: Date.now() - 1000 * 60 * 30,
-        locationLabel: "This PC",
+        locationLabel: "Computer",
         pathLabel: "D:\\",
         status: "local",
         targetDirId: "dir-drive-d",
@@ -2145,7 +2209,12 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
   // Build ONLY the entries relevant to the current page / search query
   const currentPageEntries: ExplorerEntry[] = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q && (currentDirId === "dir-settings" || currentDirId === "dir-this-pc")) {
+    if (
+      !q &&
+      (currentDirId === "dir-settings" ||
+        currentDirId === "dir-this-pc" ||
+        currentDirId === "dir-recycle-trash")
+    ) {
       return [];
     }
 
@@ -3512,9 +3581,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
       label: null,
       items: [
         { id: "dir-home", name: "Home", iconKind: "home" },
-        { id: "dir-this-pc", name: "This PC", iconKind: "pc" },
+        { id: "dir-this-pc", name: "Computer", iconKind: "pc" },
         { id: "dir-gallery", name: "Gallery", iconKind: "gallery" },
         { id: "dir-network", name: "Network", iconKind: "network" },
+        { id: "dir-recycle-trash", name: "Recycle Trash", iconKind: "recycle" },
       ],
     },
     {
@@ -3547,7 +3617,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
     if (entry.linkedSource === "gallery") {
       return entry.kind === "video" || entry.kind === "audio"
         ? "Open in Screenbox"
-        : "Open in Gallery";
+        : "Open in Photos Gallery";
     }
     if (entry.linkedSource === "notes") return "Open in Notes";
     if (entry.linkedSource === "html-writer") return "Open in HTML Writer";
@@ -4393,7 +4463,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
                     {(
                       [
                         ["dir-home", "Home"],
-                        ["dir-this-pc", "This PC"],
+                        ["dir-this-pc", "Computer"],
                       ] as const
                     ).map(([dirKey, label]) => {
                       const active = fePrefs.defaultDir === dirKey;
@@ -4896,8 +4966,116 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ navigate, routeState
                 </>
               )}
 
+              {/* RECYCLE TRASH VIEW */}
+              {currentDirId === "dir-recycle-trash" && !searchQuery.trim() && (
+                <section className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.04] px-4 py-3">
+                    <div>
+                      <div className="text-[13.5px] font-semibold">Recycle Trash</div>
+                      <div className="text-[11.5px] text-black/60 dark:text-white/60">
+                        {recycleTrash.length === 0
+                          ? "Recycle Trash is empty."
+                          : `${recycleTrash.length} ${recycleTrash.length === 1 ? "item" : "items"} deleted from Desktop`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={recycleTrash.length === 0}
+                        onClick={() => {
+                          const count = restoreAllRecycleTrash();
+                          setRecycleTrash(loadRecycleTrash());
+                          if (count > 0) {
+                            showAppToast(
+                              `Restored ${count} ${count === 1 ? "item" : "items"} to Desktop`,
+                            );
+                          }
+                        }}
+                        className="h-8 px-3 rounded-[6px] border border-black/15 dark:border-white/15 bg-white dark:bg-white/[0.08] hover:bg-black/[0.04] dark:hover:bg-white/[0.12] disabled:opacity-45 disabled:pointer-events-none text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Restore all items</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={recycleTrash.length === 0}
+                        onClick={() => {
+                          emptyRecycleTrash();
+                          setRecycleTrash([]);
+                          showAppToast("Emptied Recycle Trash");
+                        }}
+                        className="h-8 px-3 rounded-[6px] border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-45 disabled:pointer-events-none text-red-600 dark:text-red-400 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Empty Recycle Trash</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {recycleTrash.length === 0 ? (
+                    <div className="py-16 flex flex-col items-center justify-center text-center gap-3">
+                      <ExplorerSidebar3DIcon kind="recycle" className="w-14 h-14 opacity-80" />
+                      <div className="text-[13.5px] font-medium">This folder is empty</div>
+                      <div className="text-[12px] text-black/60 dark:text-white/60 max-w-sm">
+                        Drag desktop items onto Recycle Trash or press Delete to move them here.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-[8px] border border-black/[0.06] dark:border-white/[0.08] overflow-hidden divide-y divide-black/[0.05] dark:divide-white/[0.06]">
+                      {recycleTrash.map((trash) => (
+                        <div
+                          key={trash.trashId}
+                          className="px-4 py-2.5 flex items-center justify-between gap-3 bg-white/60 dark:bg-white/[0.02] hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ExplorerSidebar3DIcon
+                              kind={trash.icon.kind === "folder" ? "folder" : "documents"}
+                              className="w-6 h-6"
+                            />
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-medium truncate">
+                                {trash.icon.label}
+                              </div>
+                              <div className="text-[11px] text-black/55 dark:text-white/55 truncate">
+                                Original location: Desktop • Deleted{" "}
+                                {new Date(trash.deletedAt).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                restoreFromRecycleTrash(trash.trashId);
+                                setRecycleTrash(loadRecycleTrash());
+                                showAppToast(`Restored "${trash.icon.label}" to Desktop`);
+                              }}
+                              className="h-7 px-2.5 rounded-[6px] border border-black/15 dark:border-white/15 bg-white dark:bg-white/[0.08] hover:bg-black/[0.04] dark:hover:bg-white/[0.12] text-[12px] font-medium flex items-center gap-1 cursor-pointer"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Restore</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                permanentlyDeleteTrashItem(trash.trashId);
+                                setRecycleTrash(loadRecycleTrash());
+                              }}
+                              className="h-7 px-2.5 rounded-[6px] border border-transparent hover:bg-red-500/15 text-red-600 dark:text-red-400 text-[12px] font-medium cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
               {/* FILE LISTING (Recent on Home or any Directory listing) */}
-              {(currentDirId !== "dir-this-pc" || searchQuery.trim() !== "") &&
+              {((currentDirId !== "dir-this-pc" && currentDirId !== "dir-recycle-trash") ||
+                searchQuery.trim() !== "") &&
                 (currentDirId !== "dir-home" || recentOpen || searchQuery.trim() !== "") && (
                   <div>
                     {visibleEntries.length === 0 ? (

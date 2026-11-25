@@ -13,7 +13,16 @@ export type DesktopSortBy = "name" | "size" | "type" | "modified";
 
 export interface DesktopIconItem {
   id: string;
-  kind: "app" | "file" | "folder" | "channel" | "note" | "article" | "setting";
+  kind:
+    | "app"
+    | "file"
+    | "folder"
+    | "channel"
+    | "note"
+    | "article"
+    | "setting"
+    | "system-computer"
+    | "system-recycle-trash";
   name: string;
   gridCol: number;
   gridRow: number;
@@ -75,10 +84,28 @@ export interface PositionedDesktopIcon {
 }
 
 export const DESKTOP_ICONS_KEY = "sodium_desktop_icons_v1";
+export const DESKTOP_SYS_ICONS_SEEDED_KEY = "sodium_desktop_sys_icons_seeded_v1";
+export const RECYCLE_TRASH_KEY = "sodium_recycle_trash_v1";
+export const DESKTOP_WIDGETS_KEY = "sodium_desktop_widgets_v1";
 export const DESKTOP_AUTO_ARRANGE_KEY = "sodium_desktop_auto_arrange";
 export const DESKTOP_SNAP_TO_GRID_KEY = "sodium_desktop_snap_to_grid";
 export const CUSTOM_FS_STORAGE_KEY = "sparkle_file_explorer_v1";
 export const DESKTOP_ICONS_UPDATED_EVENT = "sodium:desktop-icons-updated";
+export const RECYCLE_TRASH_UPDATED_EVENT = "sodium:recycle-trash-updated";
+export const DESKTOP_WIDGETS_UPDATED_EVENT = "sodium:desktop-widgets-updated";
+
+export interface RecycleTrashItem {
+  id: string;
+  deletedAt: number;
+  originalDesktopIcon: DesktopIconItem;
+}
+
+export interface DesktopPinnedWidget {
+  id: string;
+  widgetId: string;
+  x: number;
+  y: number;
+}
 
 export interface CustomExplorerRecord {
   id: string;
@@ -107,7 +134,30 @@ export interface CustomExplorerRecord {
   isImportedFromDevice?: boolean | undefined;
 }
 
+export const COMPUTER_DESKTOP_ICON_ID = "desk-sys-computer";
+export const RECYCLE_TRASH_DESKTOP_ICON_ID = "desk-sys-recycle-trash";
+
 export const DEFAULT_DESKTOP_ICONS: DesktopIconItem[] = [
+  {
+    id: COMPUTER_DESKTOP_ICON_ID,
+    kind: "system-computer",
+    name: "Computer",
+    route: "/file-explorer",
+    targetDirId: "dir-this-pc",
+    gridCol: 0,
+    gridRow: 0,
+    modifiedAt: 1740000000000,
+  },
+  {
+    id: RECYCLE_TRASH_DESKTOP_ICON_ID,
+    kind: "system-recycle-trash",
+    name: "Recycle Trash",
+    route: "/file-explorer",
+    targetDirId: "dir-recycle-trash",
+    gridCol: 0,
+    gridRow: 1,
+    modifiedAt: 1740000000500,
+  },
   {
     id: "desk-seed-file-explorer",
     kind: "app",
@@ -115,9 +165,9 @@ export const DEFAULT_DESKTOP_ICONS: DesktopIconItem[] = [
     name: "File Explorer",
     route: "/file-explorer",
     gridCol: 0,
-    gridRow: 0,
+    gridRow: 2,
     sizeBytes: 256000,
-    modifiedAt: 1740000000000,
+    modifiedAt: 1740000001000,
   },
   {
     id: "desk-seed-pc-settings",
@@ -126,9 +176,9 @@ export const DEFAULT_DESKTOP_ICONS: DesktopIconItem[] = [
     name: "PC Settings",
     route: "/pc-settings",
     gridCol: 0,
-    gridRow: 1,
+    gridRow: 3,
     sizeBytes: 128000,
-    modifiedAt: 1740000001000,
+    modifiedAt: 1740000002000,
   },
   {
     id: "desk-seed-html-writer",
@@ -137,9 +187,9 @@ export const DEFAULT_DESKTOP_ICONS: DesktopIconItem[] = [
     name: "HTML Writer Studio",
     route: "/html-writer",
     gridCol: 0,
-    gridRow: 2,
+    gridRow: 4,
     sizeBytes: 256000,
-    modifiedAt: 1740000002000,
+    modifiedAt: 1740000003000,
   },
   {
     id: "desk-seed-welcome-txt",
@@ -147,11 +197,11 @@ export const DEFAULT_DESKTOP_ICONS: DesktopIconItem[] = [
     explorerEntryId: "sys-desk-welcome",
     name: "Welcome to Build 26335.txt",
     gridCol: 0,
-    gridRow: 3,
+    gridRow: 5,
     fileKind: "text",
     fileExtension: "txt",
     sizeBytes: 4200,
-    modifiedAt: 1740000003000,
+    modifiedAt: 1740000004000,
     linkedSource: "notepad",
     textContent:
       "Sodium OS — Insider Preview Build 26335\n\nIncludes:\n- WinUI 3 File Explorer with Tabs & Details Pane\n- Mica Widgets Dashboard\n- HTML Writer Live Code Editor\n- PC Settings & Quick Controls\n- Universal Drag & Drop to Desktop and Device File Import",
@@ -402,14 +452,48 @@ export function saveSnapToGrid(val: boolean): void {
   }
 }
 
+function ensureSystemDesktopIcons(list: DesktopIconItem[]): DesktopIconItem[] {
+  if (typeof window === "undefined") return list;
+  try {
+    if (localStorage.getItem(DESKTOP_SYS_ICONS_SEEDED_KEY) === "1") {
+      return list;
+    }
+    const next = [...list];
+    const occupied = new Set(next.map((it) => `${it.gridCol}:${it.gridRow}`));
+    const sysTemplates = DEFAULT_DESKTOP_ICONS.filter(
+      (it) => it.kind === "system-computer" || it.kind === "system-recycle-trash",
+    );
+    let mutated = false;
+    for (const tpl of sysTemplates) {
+      if (!next.some((it) => it.id === tpl.id || it.kind === tpl.kind)) {
+        const cell = findNearestFreeGridCell(occupied, tpl.gridCol, tpl.gridRow, 10, 8);
+        occupied.add(`${cell.col}:${cell.row}`);
+        next.unshift({ ...tpl, gridCol: cell.col, gridRow: cell.row });
+        mutated = true;
+      }
+    }
+    localStorage.setItem(DESKTOP_SYS_ICONS_SEEDED_KEY, "1");
+    if (mutated) {
+      localStorage.setItem(DESKTOP_ICONS_KEY, JSON.stringify(next));
+    }
+    return next;
+  } catch {
+    return list;
+  }
+}
+
 export function loadDesktopIcons(): DesktopIconItem[] {
   if (typeof window === "undefined") return [...DEFAULT_DESKTOP_ICONS];
   try {
     const raw = localStorage.getItem(DESKTOP_ICONS_KEY);
-    if (!raw) return [...DEFAULT_DESKTOP_ICONS];
+    if (!raw) {
+      const defaults = [...DEFAULT_DESKTOP_ICONS];
+      localStorage.setItem(DESKTOP_SYS_ICONS_SEEDED_KEY, "1");
+      return defaults;
+    }
     const parsed: unknown = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed as DesktopIconItem[];
+      return ensureSystemDesktopIcons(parsed as DesktopIconItem[]);
     }
   } catch {
     // ignore
@@ -419,6 +503,7 @@ export function loadDesktopIcons(): DesktopIconItem[] {
 
 export function saveDesktopIcons(items: DesktopIconItem[]): void {
   try {
+    localStorage.setItem(DESKTOP_SYS_ICONS_SEEDED_KEY, "1");
     localStorage.setItem(DESKTOP_ICONS_KEY, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(DESKTOP_ICONS_UPDATED_EVENT));
   } catch {
@@ -631,6 +716,9 @@ export function renameDesktopIcon(iconId: string, newName: string): DesktopIconI
 export function removeDesktopIcon(iconId: string): DesktopIconItem[] {
   const items = loadDesktopIcons();
   const target = items.find((it) => it.id === iconId);
+  if (target && (target.kind === "system-computer" || target.kind === "system-recycle-trash")) {
+    return items;
+  }
   const next = items.filter((it) => it.id !== iconId);
   saveDesktopIcons(next);
   if (target?.blobId) {
@@ -639,12 +727,210 @@ export function removeDesktopIcon(iconId: string): DesktopIconItem[] {
   return next;
 }
 
+export function loadRecycleTrash(): RecycleTrashItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECYCLE_TRASH_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as RecycleTrashItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRecycleTrash(items: RecycleTrashItem[]): void {
+  try {
+    localStorage.setItem(RECYCLE_TRASH_KEY, JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(RECYCLE_TRASH_UPDATED_EVENT));
+  } catch {
+    // ignore
+  }
+}
+
+export function moveDesktopIconToTrash(iconId: string): {
+  icons: DesktopIconItem[];
+  trash: RecycleTrashItem[];
+  moved?: DesktopIconItem;
+} {
+  const items = loadDesktopIcons();
+  const target = items.find((it) => it.id === iconId);
+  const currentTrash = loadRecycleTrash();
+  if (!target || target.kind === "system-computer" || target.kind === "system-recycle-trash") {
+    return { icons: items, trash: currentTrash };
+  }
+  const nextIcons = items.filter((it) => it.id !== iconId);
+  const trashEntry: RecycleTrashItem = {
+    id: `trash-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    deletedAt: Date.now(),
+    originalDesktopIcon: target,
+  };
+  const nextTrash = [trashEntry, ...currentTrash];
+  saveDesktopIcons(nextIcons);
+  saveRecycleTrash(nextTrash);
+  return { icons: nextIcons, trash: nextTrash, moved: target };
+}
+
+export function restoreFromRecycleTrash(
+  trashId: string,
+  config?: DesktopLayoutConfig,
+): { icons: DesktopIconItem[]; trash: RecycleTrashItem[] } {
+  const currentTrash = loadRecycleTrash();
+  const target = currentTrash.find((t) => t.id === trashId);
+  const currentIcons = loadDesktopIcons();
+  if (!target) return { icons: currentIcons, trash: currentTrash };
+
+  const layoutCfg: DesktopLayoutConfig = config || {
+    workspaceWidth: typeof window !== "undefined" ? window.innerWidth : 1280,
+    workspaceHeight: typeof window !== "undefined" ? window.innerHeight - 64 : 720,
+    viewSize: "medium",
+    sortBy: "name",
+    autoArrange: loadAutoArrange(),
+    snapToGrid: loadSnapToGrid(),
+  };
+  const { cols, rows, metrics } = getGridBounds(
+    layoutCfg.workspaceWidth,
+    layoutCfg.workspaceHeight,
+    layoutCfg.viewSize,
+  );
+  const occupied = new Set(currentIcons.map((it) => `${it.gridCol}:${it.gridRow}`));
+  const cell = findNearestFreeGridCell(
+    occupied,
+    target.originalDesktopIcon.gridCol,
+    target.originalDesktopIcon.gridRow,
+    cols,
+    rows,
+  );
+  const existingNames = new Set(currentIcons.map((it) => it.name));
+  const restoredIcon: DesktopIconItem = {
+    ...target.originalDesktopIcon,
+    name: findUniqueDesktopName(target.originalDesktopIcon.name, existingNames),
+    gridCol: cell.col,
+    gridRow: cell.row,
+    freeX: metrics.padLeft + cell.col * metrics.cellWidth,
+    freeY: metrics.padTop + cell.row * metrics.cellHeight,
+  };
+  const nextIcons = [...currentIcons, restoredIcon];
+  const nextTrash = currentTrash.filter((t) => t.id !== trashId);
+  saveDesktopIcons(nextIcons);
+  saveRecycleTrash(nextTrash);
+  return { icons: nextIcons, trash: nextTrash };
+}
+
+export function restoreAllRecycleTrash(): {
+  icons: DesktopIconItem[];
+  trash: RecycleTrashItem[];
+} {
+  const currentTrash = loadRecycleTrash();
+  let icons = loadDesktopIcons();
+  for (const item of [...currentTrash].reverse()) {
+    const res = restoreFromRecycleTrash(item.id);
+    icons = res.icons;
+  }
+  return { icons, trash: loadRecycleTrash() };
+}
+
+export function permanentlyDeleteTrashItem(trashId: string): RecycleTrashItem[] {
+  const currentTrash = loadRecycleTrash();
+  const target = currentTrash.find((t) => t.id === trashId);
+  const next = currentTrash.filter((t) => t.id !== trashId);
+  saveRecycleTrash(next);
+  if (target?.originalDesktopIcon.blobId) {
+    void deleteBlobFromStore(target.originalDesktopIcon.blobId);
+  }
+  return next;
+}
+
+export function emptyRecycleTrash(): RecycleTrashItem[] {
+  const currentTrash = loadRecycleTrash();
+  for (const item of currentTrash) {
+    if (item.originalDesktopIcon.blobId) {
+      void deleteBlobFromStore(item.originalDesktopIcon.blobId);
+    }
+  }
+  saveRecycleTrash([]);
+  return [];
+}
+
+export function loadDesktopWidgets(): DesktopPinnedWidget[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(DESKTOP_WIDGETS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as DesktopPinnedWidget[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveDesktopWidgets(items: DesktopPinnedWidget[]): void {
+  try {
+    localStorage.setItem(DESKTOP_WIDGETS_KEY, JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(DESKTOP_WIDGETS_UPDATED_EVENT));
+  } catch {
+    // ignore
+  }
+}
+
+export function pinWidgetToDesktop(
+  widgetId: string,
+  dropX: number,
+  dropY: number,
+  workspaceWidth = 1280,
+  workspaceHeight = 720,
+): DesktopPinnedWidget[] {
+  const items = loadDesktopWidgets();
+  const maxX = Math.max(16, workspaceWidth - 292);
+  const maxY = Math.max(16, workspaceHeight - 240);
+  const clampedX = Math.max(16, Math.min(maxX, Math.round(dropX - 135)));
+  const clampedY = Math.max(16, Math.min(maxY, Math.round(dropY - 36)));
+
+  const existing = items.find((w) => w.widgetId === widgetId);
+  const next = existing
+    ? items.map((w) => (w.widgetId === widgetId ? { ...w, x: clampedX, y: clampedY } : w))
+    : [
+        ...items,
+        {
+          id: `desk-widget-${widgetId}-${Date.now()}`,
+          widgetId,
+          x: clampedX,
+          y: clampedY,
+        },
+      ];
+  saveDesktopWidgets(next);
+  return next;
+}
+
+export function moveDesktopWidget(
+  id: string,
+  x: number,
+  y: number,
+  workspaceWidth = 1280,
+  workspaceHeight = 720,
+): DesktopPinnedWidget[] {
+  const items = loadDesktopWidgets();
+  const maxX = Math.max(12, workspaceWidth - 280);
+  const maxY = Math.max(12, workspaceHeight - 160);
+  const clampedX = Math.max(12, Math.min(maxX, Math.round(x)));
+  const clampedY = Math.max(12, Math.min(maxY, Math.round(y)));
+  const next = items.map((w) => (w.id === id ? { ...w, x: clampedX, y: clampedY } : w));
+  saveDesktopWidgets(next);
+  return next;
+}
+
+export function unpinDesktopWidget(id: string): DesktopPinnedWidget[] {
+  const next = loadDesktopWidgets().filter((w) => w.id !== id);
+  saveDesktopWidgets(next);
+  return next;
+}
+
 function buildDesktopIconFromPayload(
   payload: SodiumDragPayload,
   placement: { col: number; row: number; freeX: number; freeY: number },
   existingIcons: DesktopIconItem[],
 ): DesktopIconItem | null {
-  if (payload.kind === "desktop-icon") return null;
+  if (payload.kind === "desktop-icon" || payload.kind === "widget") return null;
   const uid = `desk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const existingNames = new Set(existingIcons.map((it) => it.name));
 
@@ -933,7 +1219,15 @@ export function moveIconIntoDesktopFolder(iconId: string, folderIconId: string):
   const items = loadDesktopIcons();
   const src = items.find((it) => it.id === iconId);
   const folder = items.find((it) => it.id === folderIconId && it.kind === "folder");
-  if (!src || !folder || !folder.targetDirId) return items;
+  if (
+    !src ||
+    !folder ||
+    !folder.targetDirId ||
+    src.kind === "system-computer" ||
+    src.kind === "system-recycle-trash"
+  ) {
+    return items;
+  }
 
   const customEntries = loadCustomExplorerEntries();
   if (src.explorerEntryId && customEntries.some((e) => e.id === src.explorerEntryId)) {

@@ -814,7 +814,9 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
     const ids = moveTargetIds;
     setMoveTargetIds(null);
     await galleryDB.moveToFolder(ids, folderId);
-    const dest = folderId ? (folders.find((f) => f.id === folderId)?.name ?? "folder") : "Gallery";
+    const dest = folderId
+      ? (folders.find((f) => f.id === folderId)?.name ?? "folder")
+      : "Photos Gallery";
     showToast(`Moved ${ids.length === 1 ? "item" : `${ids.length} items`} to "${dest}"`);
     setSelectedIds(new Set());
     setIsSelectMode(false);
@@ -952,7 +954,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
         className="flex flex-col h-full overflow-y-auto no-scrollbar bg-transparent text-[#111827] dark:text-[#F3F4F6] select-none font-['Segoe_UI',system-ui,sans-serif]"
       >
         <AppSettingsPage
-          appName="Gallery"
+          appName="Photos Gallery"
           versionLabel="Version: 22631.26335.0 · Photos, Videos & Media"
           className="px-4 sm:px-6 py-6 max-w-[760px] mx-auto w-full"
           primaryCards={[
@@ -979,7 +981,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
               id: "gallery-default-sort",
               icon: <ArrowUpDown className="w-5 h-5 text-[#0063B8] dark:text-[#4CC2FF]" />,
               title: "Default timeline grouping",
-              description: "Choose how media items are grouped in Gallery",
+              description: "Choose how media items are grouped in Photos Gallery",
               value: galleryPrefs.defaultSortOrder,
               options: [
                 { value: "dont-sort", label: "Don't sort" },
@@ -1037,10 +1039,12 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
               onClick: () => navigate("/feedback"),
             },
             {
-              label: "Restore default Gallery preferences",
+              label: "Restore default Photos Gallery preferences",
               onClick: () => {
                 resetAppPreferenceSection("gallery");
-                showAppToast("Gallery settings restored to defaults", { appName: "Gallery" });
+                showAppToast("Photos Gallery settings restored to defaults", {
+                  appName: "Photos Gallery",
+                });
               },
             },
           ]}
@@ -1502,7 +1506,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
                 type="button"
                 onClick={() => setCurrentFolderId(null)}
                 className="w-8 h-8 rounded-[6px] flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors text-[#005fb8] dark:text-[#4cc2ff]"
-                aria-label="Back to Gallery"
+                aria-label="Back to Photos Gallery"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
@@ -1511,7 +1515,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
                 onClick={() => setCurrentFolderId(null)}
                 className="px-2 py-1 rounded-[4px] text-[#6b7280] dark:text-neutral-400 hover:text-[#111827] dark:hover:text-white cursor-pointer font-medium"
               >
-                Gallery
+                Photos Gallery
               </button>
               <ChevronRight className="w-3.5 h-3.5 text-[#9ca3af]" />
               <div className="flex items-center gap-1.5">
@@ -1677,7 +1681,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
                       Load samples
                     </span>
                     <span className="text-[13px] text-[#8b5cf6] dark:text-[#b197fc] group-hover:underline">
-                      Load pre-installed Gallery items
+                      Load pre-installed Photos Gallery items
                     </span>
                   </div>
                 </button>
@@ -1707,7 +1711,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
                   This folder is empty
                 </h3>
                 <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-4">
-                  Right-click or select items in Gallery and move them into this folder.
+                  Right-click or select items in Photos Gallery and move them into this folder.
                 </p>
                 <button
                   type="button"
@@ -2369,7 +2373,7 @@ export const Gallery: React.FC<GalleryProps> = ({ navigate, searchQuery = "", ro
                         Load samples
                       </span>
                       <span className="text-[12px] text-[#8b5cf6] dark:text-[#b197fc] group-hover:underline">
-                        Load pre-installed Gallery items
+                        Load pre-installed Photos Gallery items
                       </span>
                     </div>
                   </button>

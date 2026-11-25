@@ -32,7 +32,7 @@ export const START_APP_ICONS: Record<string, StartAppIconRenderer> = {
   ),
   "app-gallery": appImageIcon(
     "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-TnqrgXOfnDg1aPlJr3i2qlHcw75dZC.png",
-    "Gallery",
+    "Photos Gallery",
   ),
   "app-notes": appImageIcon(
     "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-AthSjl2Q87IEHjfIyfr3mwB41ko0Pd.png",
@@ -99,6 +99,7 @@ export const START_APP_ICONS: Record<string, StartAppIconRenderer> = {
       <FlaskConical className="w-[64%] h-[64%]" />
     </div>
   ),
+  "app-sodver": appImageIcon("/assets/aistudio/image_3602759f.png", "About Sodium"),
 };
 
 export function getStartAppIdForRoute(route: string): string {
@@ -185,6 +186,9 @@ export function getStartAppIdForRoute(route: string): string {
   }
   if (cleanRoute.startsWith("/test")) {
     return "app-insider";
+  }
+  if (cleanRoute.startsWith("/sodver")) {
+    return "app-sodver";
   }
   return "app-home";
 }

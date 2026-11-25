@@ -82,7 +82,7 @@ export const WindowsBootScreen: React.FC<WindowsBootScreenProps> = ({
           }}
         >
           <div style={{ color: "#ffffff" }}>Sodium 27M1 Insider Preview</div>
-          <div style={{ color: "#ffffff" }}>Evaluation copy. Build 26335.Moment 1 (2027)</div>
+          <div style={{ color: "#ffffff" }}>Evaluation copy. Build 26335.Milestone 1 (2027)</div>
         </div>
       )}
     </div>

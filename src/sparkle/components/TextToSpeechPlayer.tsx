@@ -390,7 +390,7 @@ export const TextToSpeechPlayer: React.FC<TextToSpeechPlayerProps> = ({
                   <button
                     type="button"
                     onClick={isPlaying ? handlePause : handlePlay}
-                    className="w-11 h-11 rounded-full bg-[#4cc2ff] hover:bg-[#6bd0ff] active:scale-95 flex items-center justify-center text-white dark:text-black shadow-lg shadow-[#4cc2ff]/40 cursor-default transition-all"
+                    className="w-11 h-11 rounded-full bg-[#4cc2ff] hover:bg-[#6bd0ff] active:scale-95 flex items-center justify-center text-white dark:text-black cursor-default transition-all"
                     title={isPlaying ? "Pause" : "Play"}
                   >
                     {isPlaying ? (

@@ -1029,7 +1029,7 @@ export const PcSettings: React.FC<PcSettingsProps> = ({
                         { label: "HTML Writer", route: "/html-writer" },
                         { label: "Notes", route: "/notes" },
                         { label: "Ink Canvas", route: "/draws" },
-                        { label: "Gallery", route: "/gallery" },
+                        { label: "Photos Gallery", route: "/gallery" },
                       ].map((app) => (
                         <button
                           key={app.route}
@@ -1724,7 +1724,7 @@ export const PcSettings: React.FC<PcSettingsProps> = ({
                   route: "/draws",
                 },
                 {
-                  name: "Gallery",
+                  name: "Photos Gallery",
                   desc: "Photos, videos, and local media",
                   size: "42.6 MB",
                   route: "/gallery",

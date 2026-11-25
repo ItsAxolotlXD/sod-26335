@@ -81,12 +81,13 @@ const COMMAND_SUGGESTIONS: CommandSuggestion[] = [
   },
   { syntax: "/session /start", insertText: "/session /start", description: "Start SodiumOS Mode" },
   { syntax: "/session /end", insertText: "/session /end", description: "Exit SodiumOS Mode" },
+  { syntax: "/sodver", insertText: "/sodver", description: "Open About Sodium window" },
 ];
 
 const WELCOME_ENTRY: ConsoleEntry = {
   id: "welcome",
   lines: [
-    { text: "Sodium Direct Command [Version 26335.Moment 1]", tone: "accent" },
+    { text: "Sodium Direct Command [Version 26335.Milestone 1]", tone: "accent" },
     { text: "Type /help for a list of commands. Press Tab to autocomplete.", tone: "muted" },
   ],
 };
@@ -242,8 +243,20 @@ export const DirectCommandFlyout: React.FC<DirectCommandFlyoutProps> = ({
           text: "  /session /start                        Start SodiumOS Mode",
           prefillCommand: "/session /start",
         },
+        {
+          text: "  sodver                                 Open About Sodium window",
+          prefillCommand: "sodver",
+        },
         { text: "  cls                                    Clear command output", tone: "muted" },
       ]);
+      return;
+    }
+
+    // sodver / /sodver / winver
+    if (cmd === "sodver" || cmd === "/sodver" || cmd === "winver" || cmd === "/winver") {
+      window.dispatchEvent(new CustomEvent("vplay:open-sodver"));
+      appendEntry(trimmed, [{ text: "Opened About Sodium (Version 27M1).", tone: "success" }]);
+      onClose();
       return;
     }
 

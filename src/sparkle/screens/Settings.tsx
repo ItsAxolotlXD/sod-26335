@@ -2457,7 +2457,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   "Branch",
                   "Channel",
                   "Insider Preview",
-                  "Moment 1 (2027)",
+                  "Milestone 1 (2027)",
                   "26335",
                   "27M1",
                 ]) && (
@@ -2478,7 +2478,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     </div>
                     <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-[#111827] dark:text-white">Branch</span>
-                      <span className="font-semibold text-[#9CA3AF]">Moment 1 (2027)</span>
+                      <span className="font-semibold text-[#9CA3AF]">Milestone 1 (2027)</span>
                     </div>
                     <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-[#111827] dark:text-white">Channel</span>

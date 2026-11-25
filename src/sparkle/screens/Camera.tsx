@@ -413,7 +413,7 @@ export const Camera: React.FC<CameraProps> = ({ navigate }) => {
       // Save to Gallery IndexedDB
       await galleryDB.add(newItem);
       setRecentCapture(newItem);
-      showAppToast(`Đã lưu ảnh vào mục "Camera Rolls" trong Gallery`, { source: "camera" });
+      showAppToast(`Đã lưu ảnh vào mục "Camera Rolls" trong Photos Gallery`, { source: "camera" });
     } catch (err) {
       console.error("Lỗi khi chụp và lưu ảnh:", err);
       showAppToast("Không thể lưu ảnh chụp", { source: "camera" });
@@ -613,7 +613,7 @@ export const Camera: React.FC<CameraProps> = ({ navigate }) => {
                   navigate("/gallery");
                 }
               }}
-              title="Mở thư mục Camera Rolls trong Gallery"
+              title="Mở thư mục Camera Rolls trong Photos Gallery"
               className="h-8 px-2.5 rounded-[5px] text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Folder className="w-3.5 h-3.5" />

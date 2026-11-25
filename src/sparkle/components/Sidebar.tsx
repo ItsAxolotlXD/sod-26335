@@ -1066,7 +1066,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <div className="flex items-center gap-2.5">
             <FluentGalleryIcon className="w-4 h-4 text-[#111827] dark:text-white shrink-0" />
-            <span>Gallery</span>
+            <span>Photos Gallery</span>
           </div>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 font-medium">
             Bộ sưu tập
@@ -1711,7 +1711,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   } catch {}
                   handleNavClick("/gallery", { folderId: null });
                 }}
-                aria-label="Gallery"
+                aria-label="Photos Gallery"
                 className={`sidebar-nav-item flex-1 h-[34px] flex items-center justify-between px-3 cursor-pointer relative text-left rounded-[6px] transition-colors ${
                   (currentRoute === "/gallery" || currentRoute.startsWith("/gallery")) &&
                   selectedSidebarFolderId === null
@@ -1725,7 +1725,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ) : (
                     <FluentGalleryIcon className="w-5 h-5 shrink-0 text-black dark:text-white" />
                   )}
-                  <span className="truncate text-[13.5px]">Gallery</span>
+                  <span className="truncate text-[13.5px]">Photos Gallery</span>
                 </div>
               </button>
 
@@ -2668,9 +2668,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : undefined
                   }
                   onClick={() => handleNavClick("/gallery")}
-                  onMouseEnter={(e) => showTooltip("Gallery", e)}
+                  onMouseEnter={(e) => showTooltip("Photos Gallery", e)}
                   onMouseLeave={hideTooltip}
-                  aria-label="Gallery"
+                  aria-label="Photos Gallery"
                   className={`sidebar-nav-item w-10 h-[34px] rounded-[6px] shrink-0 flex items-center justify-center relative transition-colors cursor-pointer ${
                     currentRoute === "/gallery" || currentRoute.startsWith("/gallery")
                       ? "bg-black/5 dark:bg-white/[0.08] text-black dark:text-white shadow-xs"

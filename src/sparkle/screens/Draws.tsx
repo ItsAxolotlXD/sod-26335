@@ -766,10 +766,12 @@ export const Draws: React.FC<DrawsProps> = ({ navigate }) => {
 
     try {
       await galleryDB.add(newMedia);
-      showToast("Artwork saved to Gallery!", "Open Gallery", () => navigate("/gallery"));
+      showToast("Artwork saved to Photos Gallery!", "Open Photos Gallery", () =>
+        navigate("/gallery"),
+      );
     } catch (e) {
       console.error(e);
-      showToast("Failed to save to Gallery");
+      showToast("Failed to save to Photos Gallery");
     }
   };
 
@@ -1085,7 +1087,7 @@ export const Draws: React.FC<DrawsProps> = ({ navigate }) => {
                     >
                       <div className="flex items-center gap-2.5">
                         <ImageIcon className="w-4 h-4 text-[#005fb8] dark:text-[#4cc2ff]" />
-                        <span>Save to Gallery</span>
+                        <span>Save to Photos Gallery</span>
                       </div>
                       <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#005fb8]/15 dark:bg-[#4cc2ff]/20 text-[#005fb8] dark:text-[#4cc2ff]">
                         Direct

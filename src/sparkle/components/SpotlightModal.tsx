@@ -504,7 +504,7 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
                           }}
                           className={`w-7 h-7 rounded-full transition-all cursor-default flex items-center justify-center shrink-0 ${
                             isListening
-                              ? "bg-[#4cc2ff] text-white dark:text-black shadow-[0_0_12px_rgba(76,194,255,0.8)] scale-105 animate-pulse"
+                              ? "bg-[#4cc2ff] text-white dark:text-black scale-105 animate-pulse"
                               : "text-[#888888] hover:text-[#111827] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10"
                           }`}
                           aria-label={isListening ? "Stop listening" : "Voice search"}

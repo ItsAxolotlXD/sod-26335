@@ -12,11 +12,13 @@ import {
   FileText,
   Film,
   FolderOpen,
+  Info,
   Monitor,
   Music,
   Pin,
   PinOff,
   Presentation,
+  RotateCcw,
   Settings,
   StickyNote,
   Trash2,
@@ -51,18 +53,25 @@ import {
   addSodiumPayloadToDesktop,
   computeDesktopLayout,
   DESKTOP_ICONS_UPDATED_EVENT,
+  emptyRecycleTrash,
   getGridBounds,
   importDeviceDropToDesktop,
   loadDesktopIcons,
+  loadRecycleTrash,
   moveDesktopIcon,
+  moveDesktopIconToTrash,
   moveIconIntoDesktopFolder,
+  pinWidgetToDesktop,
   pixelToGridCell,
-  removeDesktopIcon,
+  RECYCLE_TRASH_KEY,
+  RECYCLE_TRASH_UPDATED_EVENT,
   renameDesktopIcon,
+  restoreAllRecycleTrash,
   snapAllDesktopIconsToGrid,
   type DesktopIconItem,
   type DesktopSortBy,
   type DesktopViewSize,
+  type RecycleTrashItem,
 } from "../services/desktopStore";
 import {
   getSodiumDragData,
@@ -233,6 +242,138 @@ const Win11FolderGraphic: React.FC<{ sizePx: number }> = ({ sizePx }) => (
   </svg>
 );
 
+const Win11ComputerGraphic: React.FC<{ sizePx: number }> = ({ sizePx }) => (
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    style={{ width: sizePx, height: sizePx }}
+    className="fluent-3d-icon shrink-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.35)] select-none pointer-events-none"
+  >
+    <defs>
+      <linearGradient
+        id="desk_pc_screen"
+        x1="6"
+        y1="7"
+        x2="42"
+        y2="33"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0%" stopColor="#60CDFF" />
+        <stop offset="55%" stopColor="#0078D4" />
+        <stop offset="100%" stopColor="#004E8C" />
+      </linearGradient>
+      <linearGradient
+        id="desk_pc_frame"
+        x1="4"
+        y1="6"
+        x2="44"
+        y2="35"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0%" stopColor="#334155" />
+        <stop offset="100%" stopColor="#0F172A" />
+      </linearGradient>
+    </defs>
+    <path
+      d="M19 34H29V39.5H33.5C34.3 39.5 35 40.2 35 41C35 41.8 34.3 42.5 33.5 42.5H14.5C13.7 42.5 13 41.8 13 41C13 40.2 13.7 39.5 14.5 39.5H19V34Z"
+      fill="#94A3B8"
+    />
+    <rect x="4" y="6" width="40" height="28.5" rx="4" fill="url(#desk_pc_frame)" />
+    <rect x="6.5" y="8.5" width="35" height="23.5" rx="2.2" fill="url(#desk_pc_screen)" />
+    <path
+      d="M8.5 29.5C13.5 22.5 19.5 22.5 24.5 27.2C28.5 31 33.5 27 39.5 20.5V30.5C39.5 31.3 38.8 32 38 32H10C9.2 32 8.5 31.3 8.5 30.5V29.5Z"
+      fill="#BAE6FD"
+      opacity="0.48"
+    />
+  </svg>
+);
+
+const Win11RecycleTrashGraphic: React.FC<{ sizePx: number; isEmpty: boolean }> = ({
+  sizePx,
+  isEmpty,
+}) => (
+  <svg
+    viewBox="0 0 48 48"
+    fill="none"
+    style={{ width: sizePx, height: sizePx }}
+    className="fluent-3d-icon shrink-0 drop-shadow-[0_2px_5px_rgba(0,0,0,0.35)] select-none pointer-events-none"
+  >
+    <defs>
+      <linearGradient
+        id="desk_trash_rim"
+        x1="8"
+        y1="8"
+        x2="40"
+        y2="15"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0%" stopColor="#F8FAFC" />
+        <stop offset="100%" stopColor="#CBD5E1" />
+      </linearGradient>
+      <linearGradient
+        id="desk_trash_body"
+        x1="10"
+        y1="13"
+        x2="38"
+        y2="43"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0%" stopColor="#E2E8F0" stopOpacity="0.92" />
+        <stop offset="60%" stopColor="#CBD5E1" stopOpacity="0.88" />
+        <stop offset="100%" stopColor="#94A3B8" stopOpacity="0.95" />
+      </linearGradient>
+    </defs>
+    {!isEmpty && (
+      <>
+        <rect
+          x="15"
+          y="7"
+          width="11"
+          height="13"
+          rx="1.8"
+          transform="rotate(-14 15 7)"
+          fill="#FFFFFF"
+          stroke="#94A3B8"
+          strokeWidth="1"
+        />
+        <rect
+          x="22"
+          y="6"
+          width="11"
+          height="13"
+          rx="1.8"
+          transform="rotate(11 22 6)"
+          fill="#E0F2FE"
+          stroke="#38BDF8"
+          strokeWidth="1"
+        />
+      </>
+    )}
+    <path
+      d="M10.5 13.5H37.5L34.2 40C33.9 41.7 32.4 43 30.7 43H17.3C15.6 43 14.1 41.7 13.8 40L10.5 13.5Z"
+      fill="url(#desk_trash_body)"
+      stroke="#94A3B8"
+      strokeWidth="1.2"
+    />
+    <ellipse
+      cx="24"
+      cy="13"
+      rx="14.5"
+      ry="3.4"
+      fill="url(#desk_trash_rim)"
+      stroke="#94A3B8"
+      strokeWidth="1.1"
+    />
+    <path
+      d="M21 23L24 19.5L27 23M20.5 29.5L18.5 32.5L22.2 33.2M27.8 29.5L29.8 32.5L26 33.2"
+      stroke="#0284C7"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 function formatBytes(bytes?: number): string {
   if (!bytes || bytes <= 0) return "Shortcut";
   if (bytes < 1024) return `${bytes} B`;
@@ -256,6 +397,7 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
   const { setActiveNoteId } = useNotes();
 
   const [icons, setIcons] = useState<DesktopIconItem[]>(() => loadDesktopIcons());
+  const [recycleTrash, setRecycleTrash] = useState<RecycleTrashItem[]>(() => loadRecycleTrash());
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({});
   const [workspaceSize, setWorkspaceSize] = useState<{ width: number; height: number }>({
     width: typeof window !== "undefined" ? window.innerWidth : 1280,
@@ -263,6 +405,13 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
   });
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [marqueeBox, setMarqueeBox] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const marqueeActiveRef = useRef(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [iconContextMenu, setIconContextMenu] = useState<{
@@ -282,20 +431,28 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
     mediaUrl?: string | undefined;
   } | null>(null);
 
-  // Sync icon list with external updates (File Explorer, multi-tab storage, refresh event)
+  // Sync icon list and Recycle Trash with external updates
   useEffect(() => {
     const syncIcons = () => setIcons(loadDesktopIcons());
+    const syncTrash = () => setRecycleTrash(loadRecycleTrash());
     const onStorage = (e: StorageEvent) => {
       if (!e.key || e.key === "sodium_desktop_icons_v1") {
         syncIcons();
       }
+      if (!e.key || e.key === RECYCLE_TRASH_KEY) {
+        syncTrash();
+      }
     };
     window.addEventListener(DESKTOP_ICONS_UPDATED_EVENT, syncIcons);
+    window.addEventListener(RECYCLE_TRASH_UPDATED_EVENT, syncTrash);
     window.addEventListener("sparkle:desktop-refresh", syncIcons);
+    window.addEventListener("sparkle:desktop-refresh", syncTrash);
     window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(DESKTOP_ICONS_UPDATED_EVENT, syncIcons);
+      window.removeEventListener(RECYCLE_TRASH_UPDATED_EVENT, syncTrash);
       window.removeEventListener("sparkle:desktop-refresh", syncIcons);
+      window.removeEventListener("sparkle:desktop-refresh", syncTrash);
       window.removeEventListener("storage", onStorage);
     };
   }, []);
@@ -408,6 +565,24 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
 
       if (item.kind === "setting") {
         onLaunchRoute(item.route || "/pc-settings", item.routeState);
+        return;
+      }
+
+      if (item.kind === "system-computer") {
+        window.dispatchEvent(
+          new CustomEvent("sodium:open-explorer-dir", { detail: { targetDirId: "dir-this-pc" } }),
+        );
+        onLaunchRoute("/file-explorer", { targetDirId: "dir-this-pc" });
+        return;
+      }
+
+      if (item.kind === "system-recycle-trash") {
+        window.dispatchEvent(
+          new CustomEvent("sodium:open-explorer-dir", {
+            detail: { targetDirId: "dir-recycle-trash" },
+          }),
+        );
+        onLaunchRoute("/file-explorer", { targetDirId: "dir-recycle-trash" });
         return;
       }
 
@@ -580,11 +755,22 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         let next = icons;
+        let trashedCount = 0;
         for (const id of selectedIds) {
-          next = removeDesktopIcon(id);
+          const res = moveDesktopIconToTrash(id);
+          next = res.icons;
+          if (res.moved) trashedCount += 1;
         }
         setIcons(next);
         setSelectedIds([]);
+        if (trashedCount > 0) {
+          showAppToast(
+            trashedCount === 1
+              ? "Moved item to Recycle Trash"
+              : `Moved ${trashedCount} items to Recycle Trash`,
+            { appName: "Recycle Trash" },
+          );
+        }
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -668,6 +854,17 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
       if (isInternal) {
         const payload = getSodiumDragData(e);
         if (!payload) return;
+        if (payload.kind === "widget") {
+          pinWidgetToDesktop(
+            payload.widgetId,
+            relX,
+            relY,
+            workspaceSize.width,
+            workspaceSize.height,
+          );
+          showAppToast(`Pinned ${payload.title} widget to Desktop`, { appName: "Widgets" });
+          return;
+        }
         if (payload.kind === "desktop-icon") {
           const offsetX = payload.dragOffsetX ?? metrics.cellWidth / 2;
           const offsetY = payload.dragOffsetY ?? metrics.cellHeight / 2;
@@ -690,7 +887,15 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
         setIcons(next);
       }
     },
-    [layoutConfig, metrics.cellHeight, metrics.cellWidth, onClearMenus, snapToGrid],
+    [
+      layoutConfig,
+      metrics.cellHeight,
+      metrics.cellWidth,
+      onClearMenus,
+      snapToGrid,
+      workspaceSize.height,
+      workspaceSize.width,
+    ],
   );
 
   const handleFolderDrop = useCallback(
@@ -709,6 +914,33 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
       if (isInternal) {
         const payload = getSodiumDragData(e);
         if (!payload) return;
+        if (folderItem.kind === "system-recycle-trash") {
+          if (payload.kind === "desktop-icon" && payload.desktopIconId !== folderItem.id) {
+            const res = moveDesktopIconToTrash(payload.desktopIconId);
+            setIcons(res.icons);
+            if (res.moved) {
+              setSelectedIds((prev) => prev.filter((id) => id !== res.moved!.id));
+              showAppToast(`Moved "${res.moved.name}" to Recycle Trash`, {
+                appName: "Recycle Trash",
+              });
+            }
+          }
+          return;
+        }
+        if (payload.kind === "widget") {
+          const rect = containerRef.current?.getBoundingClientRect();
+          const relX = rect ? e.clientX - rect.left : 24;
+          const relY = rect ? e.clientY - rect.top : 24;
+          pinWidgetToDesktop(
+            payload.widgetId,
+            relX,
+            relY,
+            workspaceSize.width,
+            workspaceSize.height,
+          );
+          showAppToast(`Pinned ${payload.title} widget to Desktop`, { appName: "Widgets" });
+          return;
+        }
         if (payload.kind === "desktop-icon") {
           if (payload.desktopIconId === folderItem.id) return;
           const next = moveIconIntoDesktopFolder(payload.desktopIconId, folderItem.id);
@@ -725,6 +957,7 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
       }
 
       if (isExternal) {
+        if (folderItem.kind === "system-recycle-trash") return;
         const next = await importDeviceDropToDesktop(
           e.dataTransfer,
           layoutConfig,
@@ -735,7 +968,7 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
         setIcons(next);
       }
     },
-    [layoutConfig, onClearMenus],
+    [layoutConfig, onClearMenus, workspaceSize.height, workspaceSize.width],
   );
 
   const renderIconGraphic = (item: DesktopIconItem) => {
@@ -751,6 +984,14 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
           {renderAppIcon(item, iconPx)}
         </div>
       );
+    }
+
+    if (item.kind === "system-computer") {
+      return <Win11ComputerGraphic sizePx={iconPx} />;
+    }
+
+    if (item.kind === "system-recycle-trash") {
+      return <Win11RecycleTrashGraphic sizePx={iconPx} isEmpty={recycleTrash.length === 0} />;
     }
 
     if (item.kind === "folder") {
@@ -940,6 +1181,95 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
   };
 
   const buildContextMenuItems = (item: DesktopIconItem): WindowsContextMenuItem[] => {
+    if (item.kind === "system-computer") {
+      return [
+        {
+          id: "desk-computer-open",
+          label: "Open",
+          icon: <ExternalLink className="w-4 h-4" />,
+          onSelect: () => {
+            void openDesktopItem(item);
+          },
+        },
+        { id: "desk-computer-div-1", divider: true },
+        {
+          id: "desk-computer-rename",
+          label: "Rename",
+          icon: <Edit3 className="w-4 h-4" />,
+          onSelect: () => {
+            setRenamingId(item.id);
+            setRenameDraft(item.name);
+          },
+        },
+        {
+          id: "desk-computer-properties",
+          label: "Properties",
+          icon: <Info className="w-4 h-4" />,
+          onSelect: () => {
+            onClearMenus?.();
+            onLaunchRoute("/sodver");
+          },
+        },
+      ];
+    }
+
+    if (item.kind === "system-recycle-trash") {
+      const hasItems = recycleTrash.length > 0;
+      const list: WindowsContextMenuItem[] = [
+        {
+          id: "desk-trash-open",
+          label: "Open",
+          icon: <ExternalLink className="w-4 h-4" />,
+          onSelect: () => {
+            void openDesktopItem(item);
+          },
+        },
+        {
+          id: "desk-trash-empty",
+          label: "Empty Recycle Trash",
+          icon: <Trash2 className="w-4 h-4" />,
+          danger: hasItems,
+          onSelect: () => {
+            if (!hasItems) {
+              showAppToast("Recycle Trash is already empty", { appName: "Recycle Trash" });
+              return;
+            }
+            emptyRecycleTrash();
+            setRecycleTrash([]);
+            showAppToast("Emptied Recycle Trash", { appName: "Recycle Trash" });
+          },
+        },
+      ];
+      if (hasItems) {
+        list.push({
+          id: "desk-trash-restore-all",
+          label: "Restore all items",
+          icon: <RotateCcw className="w-4 h-4" />,
+          onSelect: () => {
+            const res = restoreAllRecycleTrash();
+            setIcons(res.icons);
+            setRecycleTrash(res.trash);
+            showAppToast("Restored all items to Desktop", { appName: "Recycle Trash" });
+          },
+        });
+      }
+      list.push(
+        { id: "desk-trash-div-1", divider: true },
+        {
+          id: "desk-trash-properties",
+          label: "Properties",
+          icon: <Info className="w-4 h-4" />,
+          onSelect: () => {
+            showAppToast(
+              `${recycleTrash.length} item${recycleTrash.length === 1 ? "" : "s"} in Recycle Trash`,
+              { appName: "Recycle Trash" },
+            );
+          },
+        },
+      );
+      return list;
+    }
+
     const extLower = (item.fileExtension || item.name.split(".").pop() || "").toLowerCase();
     const isHtml = item.fileKind === "html" || extLower === "html" || extLower === "htm";
     const isMedia = item.fileKind === "video" || item.fileKind === "audio";
@@ -1050,14 +1380,14 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
       },
       {
         id: "desk-icon-remove",
-        label: "Remove from Desktop",
+        label: "Move to Recycle Trash",
         icon: <Trash2 className="w-4 h-4" />,
         danger: true,
         onSelect: () => {
-          const next = removeDesktopIcon(item.id);
-          setIcons(next);
+          const res = moveDesktopIconToTrash(item.id);
+          setIcons(res.icons);
           setSelectedIds((prev) => prev.filter((id) => id !== item.id));
-          showAppToast(`Removed "${item.name}" from Desktop`, { appName: "Desktop" });
+          showAppToast(`Moved "${item.name}" to Recycle Trash`, { appName: "Recycle Trash" });
         },
       },
     );
@@ -1065,23 +1395,100 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
     return list;
   };
 
+  const handleWorkspaceMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const t = e.target as HTMLElement | null;
+    if (
+      !t ||
+      t.closest("[data-desktop-icon-item]") ||
+      t.closest("[data-desktop-widget]") ||
+      t.closest("[data-window-frame]") ||
+      t.closest("[data-windows-context-menu]")
+    ) {
+      return;
+    }
+
+    setIconContextMenu(null);
+    if (renamingId) {
+      const next = renameDesktopIcon(renamingId, renameDraft);
+      setIcons(next);
+      setRenamingId(null);
+    }
+
+    if (e.button !== 0 || !containerRef.current) return;
+
+    const additive = e.ctrlKey || e.metaKey;
+    const baseSelected = additive ? [...selectedIds] : [];
+    if (!additive) {
+      setSelectedIds([]);
+    }
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    const startRelX = Math.max(0, Math.min(rect.width, startClientX - rect.left));
+    const startRelY = Math.max(0, Math.min(rect.height, startClientY - rect.top));
+    marqueeActiveRef.current = false;
+
+    const onMouseMove = (moveEv: MouseEvent) => {
+      const dx = moveEv.clientX - startClientX;
+      const dy = moveEv.clientY - startClientY;
+      if (!marqueeActiveRef.current && Math.hypot(dx, dy) < 4) return;
+      marqueeActiveRef.current = true;
+
+      const curRelX = Math.max(0, Math.min(rect.width, moveEv.clientX - rect.left));
+      const curRelY = Math.max(0, Math.min(rect.height, moveEv.clientY - rect.top));
+      const box = {
+        x: Math.min(startRelX, curRelX),
+        y: Math.min(startRelY, curRelY),
+        width: Math.abs(curRelX - startRelX),
+        height: Math.abs(curRelY - startRelY),
+      };
+      setMarqueeBox(box);
+
+      const boxRight = box.x + box.width;
+      const boxBottom = box.y + box.height;
+      const hitIds: string[] = [];
+      for (const pos of positionedIcons) {
+        const iconLeft = pos.x;
+        const iconTop = pos.y;
+        const iconRight = pos.x + Math.max(24, metrics.cellWidth - 4);
+        const iconBottom = pos.y + Math.max(24, metrics.cellHeight - 4);
+        const overlaps = !(
+          boxRight < iconLeft ||
+          box.x > iconRight ||
+          boxBottom < iconTop ||
+          box.y > iconBottom
+        );
+        if (overlaps) {
+          hitIds.push(pos.item.id);
+        }
+      }
+
+      if (additive) {
+        const combined = new Set([...baseSelected, ...hitIds]);
+        setSelectedIds(Array.from(combined));
+      } else {
+        setSelectedIds(hitIds);
+      }
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      marqueeActiveRef.current = false;
+      setMarqueeBox(null);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
   return (
     <>
       <div
         ref={containerRef}
         data-desktop-icons-layer="true"
-        onMouseDown={(e) => {
-          const t = e.target as HTMLElement | null;
-          if (t && !t.closest("[data-desktop-icon-item]")) {
-            setSelectedIds([]);
-            setIconContextMenu(null);
-            if (renamingId) {
-              const next = renameDesktopIcon(renamingId, renameDraft);
-              setIcons(next);
-              setRenamingId(null);
-            }
-          }
-        }}
+        onMouseDown={handleWorkspaceMouseDown}
         onDragOver={handleWorkspaceDragOver}
         onDragLeave={handleWorkspaceDragLeave}
         onDrop={handleWorkspaceDrop}
@@ -1101,6 +1508,22 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
           />
         )}
 
+        {/* Desktop marquee drag selection box */}
+        {marqueeBox && (
+          <div
+            aria-hidden="true"
+            data-desktop-selection-box="true"
+            style={{
+              left: marqueeBox.x,
+              top: marqueeBox.y,
+              width: marqueeBox.width,
+              height: marqueeBox.height,
+              opacity: 0.3,
+            }}
+            className="pointer-events-none absolute z-[8] rounded-[2px] border border-[#005a9e] dark:border-[#60cdff] bg-[#0078d4] dark:bg-[#4cc2ff]"
+          />
+        )}
+
         {/* External file drag overlay banner */}
         {isExternalDragHover && (
           <div
@@ -1117,6 +1540,7 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
           const isSelected = selectedIds.includes(item.id);
           const isRenaming = renamingId === item.id;
           const isFolderDropTarget = dragTargetFolderId === item.id;
+          const acceptsIconDrop = item.kind === "folder" || item.kind === "system-recycle-trash";
 
           return (
             <button
@@ -1137,11 +1561,12 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
                 });
               }}
               onDragOver={
-                item.kind === "folder"
+                acceptsIconDrop
                   ? (e) => {
                       const isInternal = hasSodiumDragType(e.dataTransfer);
                       const isExternal = hasExternalDeviceFiles(e.dataTransfer);
                       if (!isInternal && !isExternal) return;
+                      if (item.kind === "system-recycle-trash" && !isInternal) return;
                       e.preventDefault();
                       e.stopPropagation();
                       setDragTargetFolderId(item.id);
@@ -1150,13 +1575,13 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
                   : undefined
               }
               onDragLeave={
-                item.kind === "folder"
+                acceptsIconDrop
                   ? () => {
                       setDragTargetFolderId((prev) => (prev === item.id ? null : prev));
                     }
                   : undefined
               }
-              onDrop={item.kind === "folder" ? (e) => void handleFolderDrop(e, item) : undefined}
+              onDrop={acceptsIconDrop ? (e) => void handleFolderDrop(e, item) : undefined}
               onClick={(e) => {
                 e.stopPropagation();
                 onClearMenus?.();
@@ -1227,7 +1652,11 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
                 />
               ) : (
                 <span
-                  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 1px rgba(0,0,0,0.8)" }}
+                  style={{
+                    textShadow:
+                      "0 1px 2px rgba(0,0,0,0.96), 0 2px 6px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.72), 0 0 2px rgba(0,0,0,0.95)",
+                    filter: "drop-shadow(0 1.5px 3px rgba(0,0,0,0.75))",
+                  }}
                   className={`w-full text-[11.5px] leading-[1.25] font-normal text-white break-words ${
                     isSelected ? "line-clamp-3" : "line-clamp-2"
                   }`}
@@ -1284,7 +1713,7 @@ export const DesktopIconsLayer: React.FC<DesktopIconsLayerProps> = ({
                       }}
                       className="px-2.5 py-1.5 rounded-[6px] text-[12px] font-medium bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition-colors cursor-pointer"
                     >
-                      Open in Gallery
+                      Open in Photos Gallery
                     </button>
                   )}
                   {previewFile.mediaUrl && (

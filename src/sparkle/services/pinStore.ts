@@ -16,10 +16,12 @@ export interface PinState {
 export const DEFAULT_TASKBAR_PINS: readonly TaskbarPin[] = [
   { route: "/file-explorer", title: "File Explorer" },
   { route: "/live-tv", title: "Watch" },
+  { route: "/gallery", title: "Photos Gallery" },
 ];
 
 const TASKBAR_PINS_KEY = "sparkle_taskbar_pins_v1";
 const TASKBAR_PINS_MIGRATED_V2_KEY = "sparkle_taskbar_pins_migrated_v2";
+const TASKBAR_PINS_MIGRATED_V3_KEY = "sparkle_taskbar_pins_migrated_v3";
 const START_UNPINNED_KEY = "sparkle_start_unpinned_v1";
 
 // ---------- pure helpers ----------
@@ -106,6 +108,16 @@ const loadState = (): PinState => {
         localStorage.setItem(TASKBAR_PINS_KEY, JSON.stringify(taskbarPins));
       }
       localStorage.setItem(TASKBAR_PINS_MIGRATED_V2_KEY, "1");
+    }
+    if (!localStorage.getItem(TASKBAR_PINS_MIGRATED_V3_KEY)) {
+      if (Array.isArray(rawPins)) {
+        taskbarPins = taskbarPins.map((p) =>
+          p.route === "/gallery" ? { ...p, title: "Photos Gallery" } : p,
+        );
+        taskbarPins = addTaskbarPin(taskbarPins, "/gallery", "Photos Gallery");
+        localStorage.setItem(TASKBAR_PINS_KEY, JSON.stringify(taskbarPins));
+      }
+      localStorage.setItem(TASKBAR_PINS_MIGRATED_V3_KEY, "1");
     }
   } catch {
     // ignore storage errors

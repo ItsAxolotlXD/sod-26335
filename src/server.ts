@@ -45,6 +45,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+const LOVABLE_ASSET_ORIGIN = "https://s27m1-b26330.lovable.app";
+const ASSET_ROUTE_RE = /^\/__l5e\/assets-v1\/[^/]+\/[^/]+$/;
+
 // Hosting compresses every response at the edge. Never compress a body (gzip, brotli,
 // CompressionStream) or set content-encoding here or in a server route: the body gets encoded
 // twice and renders garbled.
@@ -53,6 +56,42 @@ export default {
     try {
       const url = new URL(request.url);
       if (url.pathname.startsWith("/__l5e/")) {
+        if (
+          ASSET_ROUTE_RE.test(url.pathname) &&
+          (request.method === "GET" || request.method === "HEAD")
+        ) {
+          try {
+            const upstreamUrl = new URL(url.pathname + url.search, LOVABLE_ASSET_ORIGIN);
+            const forwardHeaders = new Headers();
+            const range = request.headers.get("range");
+            if (range) forwardHeaders.set("range", range);
+            const upstreamRes = await fetch(upstreamUrl.toString(), {
+              method: request.method,
+              headers: forwardHeaders,
+            });
+            const responseHeaders = new Headers();
+            const copyHeaders = [
+              "content-type",
+              "content-range",
+              "accept-ranges",
+              "cache-control",
+              "etag",
+            ];
+            if (!upstreamRes.headers.get("content-encoding")) {
+              copyHeaders.push("content-length");
+            }
+            for (const key of copyHeaders) {
+              const val = upstreamRes.headers.get(key);
+              if (val) responseHeaders.set(key, val);
+            }
+            return new Response(upstreamRes.body, {
+              status: upstreamRes.status,
+              headers: responseHeaders,
+            });
+          } catch {
+            return new Response("Asset Unavailable", { status: 502 });
+          }
+        }
         return new Response("Not Found", { status: 404 });
       }
       if (url.pathname === "/api/spotlight-wallpapers") {

@@ -1,5 +1,5 @@
 // @ts-nocheck -- ported as-is from the original Sparkle project, which was not written for this strict TypeScript setup.
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -33,8 +33,13 @@ import {
   Wind,
   Sun,
   Calendar,
+  Pin,
+  Clock,
 } from "lucide-react";
 import { useSettings, getTaskbarThicknessPx } from "../hooks/useSettings";
+import { pinWidgetToDesktop } from "../services/desktopStore";
+import { setSodiumDragData } from "../utils/sodiumDragData";
+import { SpinningRing } from "./SpinningRing";
 import { NEWS_DATA } from "../data/news";
 import { Channel } from "../types";
 import { galleryDB, GalleryMediaItem } from "../services/galleryStorage";
@@ -56,6 +61,7 @@ import { useCityWeather } from "../hooks/useCityWeather";
 
 export type WidgetId =
   | "weather"
+  | "clock"
   | "photos"
   | "markets"
   | "tips"
@@ -175,6 +181,8 @@ export interface WidgetsPreferences {
   openOnHover: boolean;
   selectedCityId: string;
   newLookDiscover: boolean;
+  clockMode?: "analog" | "digital";
+  clockSeeded?: boolean;
   notificationsEnabled: {
     weatherAlerts: boolean;
     breakingNews: boolean;
@@ -187,6 +195,7 @@ export const WIDGETS_STORAGE_KEY = "sparkle_widgets_board_v1";
 export const DEFAULT_WIDGETS_PREFS: WidgetsPreferences = {
   enabledWidgets: [
     "weather",
+    "clock",
     "photos",
     "markets",
     "tips",
@@ -199,6 +208,8 @@ export const DEFAULT_WIDGETS_PREFS: WidgetsPreferences = {
   openOnHover: false,
   selectedCityId: "hanoi",
   newLookDiscover: false,
+  clockMode: "analog",
+  clockSeeded: true,
   notificationsEnabled: {
     weatherAlerts: true,
     breakingNews: true,
@@ -211,15 +222,24 @@ export function loadWidgetsPrefs(): WidgetsPreferences {
     const raw = localStorage.getItem(WIDGETS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      const enabledWidgets: WidgetId[] = Array.isArray(parsed.enabledWidgets)
+        ? [...parsed.enabledWidgets]
+        : [...DEFAULT_WIDGETS_PREFS.enabledWidgets];
+      let clockSeeded = Boolean(parsed.clockSeeded);
+      if (!clockSeeded && !enabledWidgets.includes("clock")) {
+        const weatherIdx = enabledWidgets.indexOf("weather");
+        enabledWidgets.splice(weatherIdx >= 0 ? weatherIdx + 1 : 0, 0, "clock");
+        clockSeeded = true;
+      }
       return {
         ...DEFAULT_WIDGETS_PREFS,
         ...parsed,
         selectedCityId: CITY_WEATHER_DATA.some((city) => city.id === parsed.selectedCityId)
           ? parsed.selectedCityId
           : "hanoi",
-        enabledWidgets: Array.isArray(parsed.enabledWidgets)
-          ? parsed.enabledWidgets
-          : DEFAULT_WIDGETS_PREFS.enabledWidgets,
+        clockMode: parsed.clockMode === "digital" ? "digital" : "analog",
+        clockSeeded,
+        enabledWidgets,
         notificationsEnabled: {
           ...DEFAULT_WIDGETS_PREFS.notificationsEnabled,
           ...(parsed.notificationsEnabled || {}),
@@ -237,19 +257,25 @@ export function saveWidgetsPrefs(prefs: WidgetsPreferences) {
   } catch {}
 }
 
-interface WidgetCatalogEntry {
+export interface WidgetCatalogEntry {
   id: WidgetId;
   title: string;
   description: string;
   accentColor: string;
 }
 
-const WIDGET_CATALOG: WidgetCatalogEntry[] = [
+export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
   {
     id: "games",
     title: "Casual Games",
     description: "Quick-launch mini games & Sodium Play apps.",
     accentColor: "#8b5cf6",
+  },
+  {
+    id: "clock",
+    title: "Clock",
+    description: "Live Analog and Digital clock with date and local time.",
+    accentColor: "#0078d4",
   },
   {
     id: "countdown",
@@ -553,7 +579,7 @@ const WidgetsNavIcon: React.FC<{ active?: boolean; className?: string }> = ({
 );
 
 // WinUI 3 Countdown Ring Preview & Card Component
-const CountdownRing: React.FC<{ daysLeft: number; totalDays?: number; size?: number }> = ({
+export const CountdownRing: React.FC<{ daysLeft: number; totalDays?: number; size?: number }> = ({
   daysLeft,
   totalDays = 2000,
   size = 152,
@@ -601,6 +627,310 @@ const CountdownRing: React.FC<{ daysLeft: number; totalDays?: number; size?: num
         </span>
       </div>
     </div>
+  );
+};
+
+// Shared Live Analog & Digital Clock Widget Face (WinUI 3 style)
+export const ClockWidgetFace: React.FC<{
+  mode: "analog" | "digital";
+  now: Date;
+  isLightMode: boolean;
+  compact?: boolean;
+}> = ({ mode, now, isLightMode, compact = false }) => {
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  const hour12 = hours % 12 || 12;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+
+  const secDeg = seconds * 6;
+  const minDeg = minutes * 6 + seconds * 0.1;
+  const hourDeg = (hours % 12) * 30 + minutes * 0.5;
+
+  const dateLine = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+  const timeZoneName = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "Local Time";
+    } catch {
+      return "Local Time";
+    }
+  }, []);
+
+  if (mode === "digital") {
+    return (
+      <div className={`flex flex-col justify-center ${compact ? "py-1.5" : "py-2.5"}`}>
+        <div className="flex items-baseline gap-2">
+          <span className="text-[36px] font-light leading-none tracking-tight tabular-nums">
+            {pad2(hour12)}:{pad2(minutes)}
+          </span>
+          <div className="flex flex-col leading-tight">
+            <span
+              className="text-[13px] font-semibold tabular-nums"
+              style={{ color: isLightMode ? "#0067c0" : "#4cc2ff" }}
+            >
+              :{pad2(seconds)}
+            </span>
+            <span
+              className="text-[10.5px] font-semibold uppercase"
+              style={{
+                color: isLightMode ? "rgba(17,24,39,0.62)" : "rgba(255,255,255,0.68)",
+              }}
+            >
+              {ampm}
+            </span>
+          </div>
+        </div>
+        <div className="mt-2.5 text-[12.5px] font-medium">{dateLine}</div>
+        <div
+          className="text-[11px] mt-0.5 truncate"
+          style={{
+            color: isLightMode ? "rgba(17,24,39,0.58)" : "rgba(255,255,255,0.62)",
+          }}
+        >
+          {timeZoneName}
+        </div>
+      </div>
+    );
+  }
+
+  const dialSize = compact ? 104 : 114;
+  const accentColor = isLightMode ? "#0078d4" : "#4cc2ff";
+  const handMainColor = isLightMode ? "#111827" : "#f8fafc";
+  const tickMajorColor = isLightMode ? "rgba(17,24,39,0.65)" : "rgba(255,255,255,0.75)";
+  const tickMinorColor = isLightMode ? "rgba(17,24,39,0.24)" : "rgba(255,255,255,0.26)";
+  const dialFill = isLightMode ? "rgba(0,0,0,0.035)" : "rgba(255,255,255,0.06)";
+  const dialStroke = isLightMode ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.16)";
+
+  return (
+    <div className="flex items-center gap-3.5 py-0.5">
+      <svg
+        width={dialSize}
+        height={dialSize}
+        viewBox="0 0 120 120"
+        className="fluent-3d-icon shrink-0"
+        aria-label={`Analog clock showing ${pad2(hour12)}:${pad2(minutes)} ${ampm}`}
+      >
+        <circle cx="60" cy="60" r="55" fill={dialFill} stroke={dialStroke} strokeWidth="1.75" />
+        {Array.from({ length: 12 }).map((_, idx) => {
+          const a = ((idx * 30 - 90) * Math.PI) / 180;
+          const isMajor = idx % 3 === 0;
+          const rOuter = 49;
+          const rInner = isMajor ? 42 : 45;
+          return (
+            <line
+              key={idx}
+              x1={60 + Math.cos(a) * rInner}
+              y1={60 + Math.sin(a) * rInner}
+              x2={60 + Math.cos(a) * rOuter}
+              y2={60 + Math.sin(a) * rOuter}
+              stroke={isMajor ? tickMajorColor : tickMinorColor}
+              strokeWidth={isMajor ? 2.2 : 1.4}
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {/* Hour hand */}
+        <line
+          x1="60"
+          y1="60"
+          x2="60"
+          y2="31"
+          stroke={handMainColor}
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          transform={`rotate(${hourDeg} 60 60)`}
+        />
+        {/* Minute hand */}
+        <line
+          x1="60"
+          y1="60"
+          x2="60"
+          y2="20"
+          stroke={handMainColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          transform={`rotate(${minDeg} 60 60)`}
+        />
+        {/* Second hand */}
+        <line
+          x1="60"
+          y1="70"
+          x2="60"
+          y2="16"
+          stroke={accentColor}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          transform={`rotate(${secDeg} 60 60)`}
+        />
+        <circle cx="60" cy="60" r="3.6" fill={accentColor} />
+        <circle cx="60" cy="60" r="1.4" fill={isLightMode ? "#ffffff" : "#111827"} />
+      </svg>
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="text-[19px] font-light tabular-nums leading-tight">
+          {pad2(hour12)}:{pad2(minutes)} <span className="text-[12px] font-semibold">{ampm}</span>
+        </div>
+        <div className="text-[12px] font-medium truncate">{dateLine}</div>
+        <div
+          className="text-[10.5px] truncate"
+          style={{
+            color: isLightMode ? "rgba(17,24,39,0.58)" : "rgba(255,255,255,0.62)",
+          }}
+        >
+          {timeZoneName}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Morphing Vertical Pill Indicator matching WinUI 3 WindowAppSidebar animation
+const WidgetsMorphingVerticalIndicator: React.FC<{
+  containerRef: React.RefObject<HTMLElement | null>;
+  dependencyKey: string;
+  reduceMotion?: boolean;
+  isLightMode?: boolean;
+}> = ({ containerRef, dependencyKey, reduceMotion = false, isLightMode = false }) => {
+  const [bounds, setBounds] = useState<{
+    top: number;
+    left: number;
+    height: number;
+    visible: boolean;
+  }>({ top: 0, left: 6, height: 48, visible: false });
+
+  const prevTopRef = useRef<number | null>(null);
+  const [stretchKey, setStretchKey] = useState(0);
+
+  useLayoutEffect(() => {
+    let isCancelled = false;
+    let observer: ResizeObserver | null = null;
+    let mutationObserver: MutationObserver | null = null;
+    let rafId: number | null = null;
+    let timer1: ReturnType<typeof setTimeout> | null = null;
+    let timer2: ReturnType<typeof setTimeout> | null = null;
+
+    const measure = () => {
+      if (isCancelled) return;
+      const container = containerRef.current;
+      if (!container) return;
+
+      const activeEl = container.querySelector('[data-nav-active="true"]') as HTMLElement | null;
+      if (!activeEl) {
+        setBounds((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const top = Math.round(activeRect.top - containerRect.top + container.scrollTop);
+      const left = Math.round(activeRect.left - containerRect.left);
+      const height = Math.round(activeRect.height);
+
+      if (height > 0) {
+        setBounds({ top, left, height, visible: true });
+      }
+    };
+
+    measure();
+    rafId = requestAnimationFrame(measure);
+    timer1 = setTimeout(measure, 40);
+    timer2 = setTimeout(measure, 160);
+
+    const container = containerRef.current;
+    if (container) {
+      observer = new ResizeObserver(() => measure());
+      observer.observe(container);
+
+      mutationObserver = new MutationObserver(() => measure());
+      mutationObserver.observe(container, {
+        attributes: true,
+        attributeFilter: ["data-nav-active"],
+        subtree: true,
+      });
+    }
+
+    return () => {
+      isCancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (timer1) clearTimeout(timer1);
+      if (timer2) clearTimeout(timer2);
+      if (observer) observer.disconnect();
+      if (mutationObserver) mutationObserver.disconnect();
+    };
+  }, [dependencyKey, containerRef]);
+
+  const INDICATOR_HEIGHT = 18;
+  const centeredTop = bounds.top + Math.round((bounds.height - INDICATOR_HEIGHT) / 2);
+
+  useEffect(() => {
+    if (bounds.visible) {
+      if (
+        !reduceMotion &&
+        prevTopRef.current !== null &&
+        Math.abs(prevTopRef.current - centeredTop) > 2
+      ) {
+        setStretchKey((k) => k + 1);
+      }
+      prevTopRef.current = centeredTop;
+    } else {
+      prevTopRef.current = null;
+    }
+  }, [centeredTop, bounds.visible, reduceMotion]);
+
+  if (!bounds.visible) return null;
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="absolute w-[3px] h-[18px] z-30 pointer-events-none rounded-full"
+      initial={false}
+      animate={{
+        top: centeredTop,
+        left: bounds.left,
+        opacity: bounds.visible ? 1 : 0,
+      }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : {
+              top: {
+                duration: 0.38,
+                ease: [0.4, 0.0, 0.2, 1],
+              },
+              left: {
+                duration: 0.38,
+                ease: [0.4, 0.0, 0.2, 1],
+              },
+              opacity: {
+                duration: 0.15,
+              },
+            }
+      }
+    >
+      <motion.div
+        key={`widgets-pill-stretch-${stretchKey}`}
+        className="w-full h-full rounded-full origin-center"
+        style={{ backgroundColor: isLightMode ? "#0067c0" : "#4cc2ff" }}
+        initial={{ scaleY: 1 }}
+        animate={{
+          scaleY: !reduceMotion && stretchKey > 0 ? [1, 2.2, 1] : 1,
+        }}
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : {
+                duration: 0.38,
+                times: [0, 0.5, 1],
+                ease: [0.4, 0.0, 0.2, 1],
+              }
+        }
+      />
+    </motion.div>
   );
 };
 
@@ -699,8 +1029,13 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
   // Gallery photos for Photos widget
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryMediaItem[]>([]);
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [draggingWidgetId, setDraggingWidgetId] = useState<WidgetId | null>(null);
+  const [dragOverWidgetId, setDragOverWidgetId] = useState<WidgetId | null>(null);
+  const [showBoardSplash, setShowBoardSplash] = useState(true);
+  const [clockNow, setClockNow] = useState(() => new Date());
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const navRailRef = useRef<HTMLElement>(null);
 
   const updatePrefs = (updater: (prev: WidgetsPreferences) => WidgetsPreferences) => {
     setPrefs((prev) => {
@@ -709,6 +1044,33 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
       return next;
     });
   };
+
+  // Sync prefs if updated from Desktop Clock widget
+  useEffect(() => {
+    const onPrefsChanged = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) setPrefs(detail);
+      else setPrefs(loadWidgetsPrefs());
+    };
+    window.addEventListener("sparkle:widgets-prefs-changed", onPrefsChanged);
+    return () => window.removeEventListener("sparkle:widgets-prefs-changed", onPrefsChanged);
+  }, []);
+
+  // 3-second WinUI loading ring splash before Widgets dashboard loads
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setShowBoardSplash(true);
+    const timer = window.setTimeout(() => setShowBoardSplash(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+
+  // Live 1-second clock tick while board is open
+  useEffect(() => {
+    if (!isOpen) return;
+    setClockNow(new Date());
+    const id = window.setInterval(() => setClockNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, [isOpen]);
 
   // Keep Discover nav disabled cleanly if toggled off in Settings
   useEffect(() => {
@@ -962,6 +1324,37 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
     setIsAddModalOpen(false);
   };
 
+  const pinWidgetOutToDesktop = (id: WidgetId) => {
+    const entry = WIDGET_CATALOG.find((c) => c.id === id);
+    const boardWidth = boardRef.current?.getBoundingClientRect().right ?? 860;
+    const defaultX =
+      typeof window !== "undefined" && boardWidth + 320 < window.innerWidth
+        ? boardWidth + 160
+        : 220;
+    pinWidgetToDesktop(
+      id,
+      defaultX,
+      140,
+      typeof window !== "undefined" ? window.innerWidth : 1280,
+      typeof window !== "undefined" ? window.innerHeight - 64 : 720,
+    );
+    setOpenMenuWidget(null);
+    showAppToast(`Pinned ${entry?.title || id} widget to Desktop`, { appName: "Widgets" });
+  };
+
+  const reorderWidgets = (sourceId: WidgetId, targetId: WidgetId) => {
+    if (sourceId === targetId) return;
+    updatePrefs((p) => {
+      const list = [...p.enabledWidgets];
+      const fromIdx = list.indexOf(sourceId);
+      const toIdx = list.indexOf(targetId);
+      if (fromIdx === -1 || toIdx === -1) return p;
+      list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, sourceId);
+      return { ...p, enabledWidgets: list };
+    });
+  };
+
   const formatTimer = (secs: number) => {
     const m = Math.floor(secs / 60)
       .toString()
@@ -971,7 +1364,7 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
   };
 
   const cardSurfaceClass =
-    "rounded-[10px] border border-black/[0.06] dark:border-white/[0.08] bg-white/75 dark:bg-[#2b2f36]/80 backdrop-blur-md transition-colors";
+    "rounded-[10px] border border-black/[0.06] dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.06] transition-colors";
 
   const linkTextStyle: React.CSSProperties = {
     color: isLightMode ? "#0067c0" : "#4cc2ff",
@@ -1030,6 +1423,15 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                   <button
                     type="button"
                     role="menuitem"
+                    onClick={() => pinWidgetOutToDesktop(id)}
+                    className="w-full h-8 px-2.5 rounded-[5px] flex items-center gap-2 text-[12px] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] cursor-pointer text-left border-none bg-transparent"
+                  >
+                    <Pin className="w-3.5 h-3.5" />
+                    <span>Pin to desktop</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
                     onClick={() => {
                       setOpenMenuWidget(null);
                       showAppToast("Widget refreshed", "info");
@@ -1065,7 +1467,7 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
         return (
           <div
             key="weather"
-            className={`${cardSurfaceClass} p-4 flex flex-col justify-between ${isPreview ? "" : "md:row-span-2"}`}
+            className={`${cardSurfaceClass} h-full p-4 flex flex-col justify-between ${isPreview ? "" : "md:row-span-2"}`}
           >
             <div>
               {/* City Header */}
@@ -1475,7 +1877,7 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
             icon: <Fluent3DNotesIcon className="w-9 h-9" />,
           },
           {
-            label: "Gallery",
+            label: "Photos Gallery",
             bg: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
             route: "/gallery",
             icon: <Fluent3DGalleryIcon className="w-9 h-9" />,
@@ -1964,6 +2366,43 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
           </div>
         );
 
+      case "clock": {
+        const mode = prefs.clockMode === "digital" ? "digital" : "analog";
+        return (
+          <div key="clock" className={`${cardSurfaceClass} p-4 flex flex-col justify-between`}>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Clock className="w-4 h-4 fluent-3d-icon shrink-0" style={{ color: "#0078d4" }} />
+                <span className="text-[13px] font-medium truncate">Clock</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center p-0.5 rounded-[6px] bg-black/[0.06] dark:bg-white/[0.08]">
+                  {(["analog", "digital"] as const).map((opt) => {
+                    const active = mode === opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => updatePrefs((p) => ({ ...p, clockMode: opt }))}
+                        className={`px-2 py-0.5 rounded-[4px] text-[10.5px] font-medium transition-colors cursor-pointer border-none whitespace-nowrap ${
+                          active
+                            ? "bg-white dark:bg-white/[0.16] shadow-xs font-semibold"
+                            : "bg-transparent opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        {opt === "analog" ? "Analog" : "Digital"}
+                      </button>
+                    );
+                  })}
+                </div>
+                {renderWidgetMenu("clock", isPreview)}
+              </div>
+            </div>
+            <ClockWidgetFace mode={mode} now={clockNow} isLightMode={isLightMode} />
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -2027,12 +2466,21 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
           >
             {/* Left WinUI 3 Navigation Rail */}
             <aside
+              ref={navRailRef}
               aria-label="Widgets navigation"
-              className="w-[68px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.07] bg-white/30 dark:bg-black/15 flex flex-col items-center justify-between py-3 px-1.5"
+              className="relative w-[68px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.07] bg-transparent flex flex-col items-center justify-between py-3 px-1.5"
             >
+              <WidgetsMorphingVerticalIndicator
+                containerRef={navRailRef}
+                dependencyKey={`${activeNav}:${prefs.discoverEnabled}:${isOpen}:${showBoardSplash}`}
+                reduceMotion={settings.reduceAllMotion}
+                isLightMode={isLightMode}
+              />
+
               <div className="w-full space-y-1.5">
                 <button
                   type="button"
+                  data-nav-active={activeNav === "widgets" ? "true" : undefined}
                   onClick={() => setActiveNav("widgets")}
                   className={`relative w-full py-2 rounded-[8px] flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer border-none ${
                     activeNav === "widgets"
@@ -2040,9 +2488,6 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                       : "hover:bg-black/[0.05] dark:hover:bg-white/[0.06] bg-transparent"
                   }`}
                 >
-                  {activeNav === "widgets" && (
-                    <span className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full bg-[#0067c0] dark:bg-[#4cc2ff]" />
-                  )}
                   <WidgetsNavIcon active={activeNav === "widgets"} className="w-5 h-5" />
                   <span className="text-[10.5px] font-medium">Widgets</span>
                 </button>
@@ -2050,6 +2495,7 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                 {prefs.discoverEnabled && (
                   <button
                     type="button"
+                    data-nav-active={activeNav === "discover" ? "true" : undefined}
                     onClick={() => setActiveNav("discover")}
                     className={`relative w-full py-2 rounded-[8px] flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer border-none ${
                       activeNav === "discover"
@@ -2057,9 +2503,6 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                         : "hover:bg-black/[0.05] dark:hover:bg-white/[0.06] bg-transparent"
                     }`}
                   >
-                    {activeNav === "discover" && (
-                      <span className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full bg-[#0067c0] dark:bg-[#4cc2ff]" />
-                    )}
                     <DiscoverButterflyIcon className="w-5 h-5" />
                     <span className="text-[10.5px] font-medium">Discover</span>
                   </button>
@@ -2069,6 +2512,7 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
               <button
                 type="button"
                 aria-label="Widget settings"
+                data-nav-active={activeNav === "settings" ? "true" : undefined}
                 onClick={() => setActiveNav("settings")}
                 className={`relative w-full py-2.5 rounded-[8px] flex items-center justify-center transition-colors cursor-pointer border-none ${
                   activeNav === "settings"
@@ -2076,15 +2520,12 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                     : "hover:bg-black/[0.05] dark:hover:bg-white/[0.06] bg-transparent"
                 }`}
               >
-                {activeNav === "settings" && (
-                  <span className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full bg-[#0067c0] dark:bg-[#4cc2ff]" />
-                )}
                 <SettingsIcon className="w-[18px] h-[18px]" />
               </button>
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden bg-white/[0.52] dark:bg-white/[0.055] rounded-tl-[5px]">
               {/* TAB 1: WIDGETS */}
               {activeNav === "widgets" && (
                 <div className="flex-1 flex flex-col min-h-0">
@@ -2118,7 +2559,78 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 items-stretch">
-                        {prefs.enabledWidgets.map((wId) => renderWidgetCard(wId))}
+                        {prefs.enabledWidgets.map((wId) => {
+                          const catTitle = WIDGET_CATALOG.find((c) => c.id === wId)?.title || wId;
+                          const isDragging = draggingWidgetId === wId;
+                          const isDragTarget = dragOverWidgetId === wId && draggingWidgetId !== wId;
+                          return (
+                            <div
+                              key={wId}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = "copyMove";
+                                e.dataTransfer.setData("text/plain", `widget:${wId}`);
+                                setSodiumDragData(
+                                  e,
+                                  { kind: "widget", widgetId: wId, title: catTitle },
+                                  { preserveTextPlain: true },
+                                );
+                                setDraggingWidgetId(wId);
+                                setDragOverWidgetId(null);
+                              }}
+                              onDragOver={(e) => {
+                                if (!draggingWidgetId || draggingWidgetId === wId) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.dataTransfer.dropEffect = "move";
+                                if (dragOverWidgetId !== wId) {
+                                  setDragOverWidgetId(wId);
+                                }
+                              }}
+                              onDragLeave={(e) => {
+                                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                                  setDragOverWidgetId((prev) => (prev === wId ? null : prev));
+                                }
+                              }}
+                              onDrop={(e) => {
+                                if (!draggingWidgetId) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                reorderWidgets(draggingWidgetId, wId);
+                                setDraggingWidgetId(null);
+                                setDragOverWidgetId(null);
+                              }}
+                              onDragEnd={(e) => {
+                                if (
+                                  e.dataTransfer.dropEffect === "none" &&
+                                  boardRef.current &&
+                                  (e.clientX > 0 || e.clientY > 0)
+                                ) {
+                                  const rect = boardRef.current.getBoundingClientRect();
+                                  const outsideBoard =
+                                    e.clientX < rect.left ||
+                                    e.clientX > rect.right ||
+                                    e.clientY < rect.top ||
+                                    e.clientY > rect.bottom;
+                                  if (outsideBoard) {
+                                    pinWidgetOutToDesktop(wId, e.clientX - 150, e.clientY - 90);
+                                  }
+                                }
+                                setDraggingWidgetId(null);
+                                setDragOverWidgetId(null);
+                              }}
+                              className={`relative rounded-[10px] cursor-grab active:cursor-grabbing transition-all [&>*]:h-full ${
+                                wId === "weather" ? "md:row-span-2" : ""
+                              } ${isDragging ? "opacity-45 scale-[0.98]" : ""} ${
+                                isDragTarget
+                                  ? "ring-2 ring-[#0078d4] dark:ring-[#4cc2ff] ring-offset-1 ring-offset-transparent"
+                                  : ""
+                              }`}
+                            >
+                              {renderWidgetCard(wId)}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -2633,7 +3145,7 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                             <div>
                               <div className="text-[13.5px] font-medium">Widgets</div>
                               <div className="text-[11.5px] tabular-nums" style={mutedTextStyle}>
-                                Version: 526.31400.0.0 · Build 26335.Moment 1
+                                Version: 526.31400.0.0 · Build 26335.Milestone 1
                               </div>
                             </div>
                           </div>
@@ -2830,6 +3342,23 @@ export const WindowsWidgetsBoard: React.FC<WindowsWidgetsBoardProps> = ({
                 </div>
               )}
             </AnimatePresence>
+
+            {showBoardSplash && (
+              <div
+                role="status"
+                aria-label="Loading Widgets"
+                className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-5"
+                style={{
+                  backgroundColor: isLightMode ? "#ffffff" : "#202020",
+                  backgroundImage: "none",
+                  opacity: 1,
+                  isolation: "isolate",
+                }}
+              >
+                <WidgetsNavIcon active className="w-16 h-16 shrink-0 drop-shadow-sm" />
+                <SpinningRing size={34} ariaLabel="Loading Widgets" />
+              </div>
+            )}
           </div>
         </motion.div>
       )}

@@ -87,6 +87,7 @@ const Calculator = React.lazy(() =>
   import("./screens/Calculator").then((m) => ({ default: m.Calculator })),
 );
 const Weather = React.lazy(() => import("./screens/Weather").then((m) => ({ default: m.Weather })));
+const Sodver = React.lazy(() => import("./screens/Sodver").then((m) => ({ default: m.Sodver })));
 import { CHANNELS_DATA } from "./data/channels";
 import { NEWS_DATA } from "./data/news";
 import { Channel, NewsArticle } from "./types";
@@ -102,6 +103,7 @@ import { WindowsContextMenu } from "./components/WindowsContextMenu";
 import { WindowsLockScreen } from "./components/WindowsLockScreen";
 import { DirectCommandFlyout } from "./components/DirectCommandFlyout";
 import { DesktopIconsLayer } from "./components/DesktopIconsLayer";
+import { DesktopWidgetsLayer } from "./components/DesktopWidgetsLayer";
 import {
   loadAutoArrange,
   saveAutoArrange,
@@ -133,7 +135,7 @@ export function getRouteTitle(route: string, channel?: Channel): string {
     const found = NEWS_DATA.find((n) => n.slug === slug);
     return found ? found.title.replace(/^#\s*/, "") : "Article";
   }
-  if (route.startsWith("/gallery")) return "Gallery";
+  if (route.startsWith("/gallery")) return "Photos Gallery";
   if (route.startsWith("/notes") || route.startsWith("/write")) return "Notes";
   if (route.startsWith("/craftmine")) return "Craftmine";
   if (route.startsWith("/photopea")) return "Photopea";
@@ -154,6 +156,7 @@ export function getRouteTitle(route: string, channel?: Channel): string {
   if (route.startsWith("/test")) return "Test Channels";
   if (route.startsWith("/search")) return "Search";
   if (route.startsWith("/about")) return "About";
+  if (route.startsWith("/sodver")) return "About Sodium";
   if (route.startsWith("/auth") || route.startsWith("/reset-password")) return "Account";
   const clean = route.replace(/^\//, "").split(/[/?#]/)[0];
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Home";
@@ -338,6 +341,24 @@ export default function App() {
       const minY = taskbarLocation === "top" ? taskbarThickness : 0;
       const availW = Math.max(320, vw - (isVerticalTaskbar ? taskbarThickness : 0));
       const availH = Math.max(240, vh - (!isVerticalTaskbar ? taskbarThickness : 0));
+      const isSodverRoute = Boolean(
+        routePath && (routePath === "/sodver" || routePath.startsWith("/sodver/")),
+      );
+      if (isSodverRoute) {
+        const sodW = Math.min(480, availW);
+        const sodH = Math.min(510, availH);
+        const sodX = Math.max(minX, Math.round(minX + (availW - sodW) / 2));
+        const sodY = Math.max(minY, Math.round(minY + (availH - sodH) / 2));
+        return {
+          x: sodX,
+          y: sodY,
+          width: sodW,
+          height: sodH,
+          isMinimized: false,
+          isMaximized: false,
+          zIndex,
+        };
+      }
       if (isMobileVw) {
         return {
           x: minX,
@@ -978,9 +999,14 @@ export default function App() {
   const handleToggleMaximizeWindow = useCallback(
     (tabId: string) => {
       const currentTabs = tabsRef.current;
+      const targetTab = currentTabs.find((t) => t.id === tabId);
+      const isSodverTab = Boolean(
+        targetTab && (targetTab.route === "/sodver" || targetTab.route.startsWith("/sodver/")),
+      );
       setActiveTabId(tabId);
       setWindowStates((prevWs) => {
         const updated = bringWindowToFront(prevWs, tabId, currentTabs, true);
+        if (isSodverTab) return updated;
         const target = updated[tabId];
         if (!target) return updated;
         return {
@@ -1474,6 +1500,15 @@ export default function App() {
     ],
   );
 
+  useEffect(() => {
+    const handleOpenSodver = () => {
+      setIsStartMenuOpen(false);
+      navigate("/sodver");
+    };
+    window.addEventListener("vplay:open-sodver", handleOpenSodver);
+    return () => window.removeEventListener("vplay:open-sodver", handleOpenSodver);
+  }, [navigate]);
+
   const handleSaveAndNavigate = () => {
     applyDraftSettings();
     setIsUnsavedSettingsModalOpen(false);
@@ -1669,6 +1704,7 @@ export default function App() {
     stateOverride?: any,
     navigateOverride?: (path: string, state?: any) => void,
     channelOverride?: Channel,
+    onCloseWindow?: () => void,
   ) => {
     const activeRoute = routeOverride ?? currentRoute;
     const activeState = stateOverride !== undefined ? stateOverride : routeState;
@@ -1912,6 +1948,9 @@ export default function App() {
       case "/weather":
         return <Weather navigate={activeNav} />;
 
+      case "/sodver":
+        return <Sodver navigate={activeNav} onClose={onCloseWindow || (() => activeNav("/"))} />;
+
       default:
         return (
           <HomePreview
@@ -2147,6 +2186,15 @@ export default function App() {
                     }}
                   />
                 )}
+                {isSplashFinished && (
+                  <DesktopWidgetsLayer
+                    onLaunchRoute={(r, st) => openNewAppWindow(r, st)}
+                    onClearMenus={() => {
+                      setIsStartMenuOpen(false);
+                      setDesktopContextMenu(null);
+                    }}
+                  />
+                )}
                 <AnimatePresence>
                   {tabs.map((tab) => {
                     const ws = windowStates[tab.id];
@@ -2243,6 +2291,7 @@ export default function App() {
                               tab.routeState,
                               (p, s) => navigateInWindow(tab.id, p, s),
                               winChannel,
+                              () => handleCloseTab(tab.id),
                             )}
                           </React.Suspense>
                         )}
@@ -2315,6 +2364,8 @@ export default function App() {
                     currentRoute === "/camera" ||
                     currentRoute === "/calculator" ||
                     currentRoute.startsWith("/calculator/") ||
+                    currentRoute === "/sodver" ||
+                    currentRoute.startsWith("/sodver/") ||
                     currentRoute === "/weather" ||
                     currentRoute.startsWith("/weather/") ||
                     currentRoute === "/notepad" ||

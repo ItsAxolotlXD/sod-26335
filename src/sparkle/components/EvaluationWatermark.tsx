@@ -57,9 +57,9 @@ export const EvaluationWatermark: React.FC<EvaluationWatermarkProps> = ({
         textShadow: "none",
       }}
     >
-      <div style={{ color: "#ffffff", textShadow: "none" }}>Sodium 27M1 Insider Preview</div>
+      <div style={{ color: "#ffffff", textShadow: "none" }}>Sodium 27 Insider Preview</div>
       <div style={{ color: "#ffffff", textShadow: "none" }}>
-        Evaluation copy. Build 26335.Moment 1 (2027)
+        Evaluation copy. Build 26335_sod27M1.rs_prerelease.2511c
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ describe("StartLayoutConcept Vive feature", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("is off by default so the classic Start menu stays until enabled", () => {
-    expect(DEFAULT_SETTINGS.startLayoutConcept).toBe(false);
+  it("is enabled by default so the Start layout concept is active out of the box", () => {
+    expect(DEFAULT_SETTINGS.startLayoutConcept).toBe(true);
   });
 });

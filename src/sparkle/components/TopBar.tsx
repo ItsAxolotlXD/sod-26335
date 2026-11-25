@@ -626,9 +626,9 @@ export const TopBar: React.FC<TopBarProps> = ({
       },
       {
         id: "page-gallery",
-        title: "Gallery",
+        title: "Photos Gallery",
         subtitle: "Switch page",
-        keywords: "gallery bộ sưu tập ảnh video âm thanh phương tiện media photos",
+        keywords: "photos gallery bộ sưu tập ảnh video âm thanh phương tiện media photos",
         type: "page",
         onSelect: () => navigate("/gallery"),
       },
@@ -1257,13 +1257,13 @@ export const TopBar: React.FC<TopBarProps> = ({
         customAction: {
           label: "Xem",
           onAction: () => {
-            saveToHistory(media.title, { subtitle: "Gallery", type: "gallery" });
+            saveToHistory(media.title, { subtitle: "Photos Gallery", type: "gallery" });
             navigate(`/gallery?preview=${encodeURIComponent(media.id)}`);
             setIsSearchFlyoutOpen(false);
           },
         },
         onSelect: () => {
-          saveToHistory(media.title, { subtitle: "Gallery", type: "gallery" });
+          saveToHistory(media.title, { subtitle: "Photos Gallery", type: "gallery" });
           navigate(`/gallery?preview=${encodeURIComponent(media.id)}`);
         },
       });
@@ -1326,10 +1326,10 @@ export const TopBar: React.FC<TopBarProps> = ({
       {
         id: "trending-memories",
         title: "View memories",
-        subtitle: "Gallery",
+        subtitle: "Photos Gallery",
         type: "page" as const,
         onSelect: () => {
-          saveToHistory("View memories", { subtitle: "Gallery", type: "page" });
+          saveToHistory("View memories", { subtitle: "Photos Gallery", type: "page" });
           navigate("/gallery");
           setIsSearchFlyoutOpen(false);
           setShowAllResults(false);

@@ -2432,7 +2432,7 @@ html.light-mode [id^="settings-section-"] .grid.rounded-full button.bg-\[\#4cc2f
 html.light-mode [id^="settings-section-"] .grid.rounded-full button[class*="bg-[#4cc2ff]"] {
   background-color: var(--ui-accent) !important;
   color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(0, 95, 184, 0.35) !important;
+  box-shadow: none !important;
 }
 
 html.light-mode .settings-segmented-group button.bg-\[\#4cc2ff\] *,
@@ -2535,6 +2535,7 @@ html:not(.light-mode) .windows-mica-frame {
     rgba(255, 255, 255, 0) 45%
   ) !important;
   backdrop-filter: blur(22px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
 }
 
 .windows-mica-frame[data-window-active="false"],
@@ -2543,6 +2544,7 @@ html:not(.light-mode) .windows-mica-frame[data-window-active="false"] {
   background-color: rgba(26, 29, 34, 0.94) !important;
   background-image: none !important;
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html.light-mode .windows-mica-frame {
@@ -2553,12 +2555,14 @@ html.light-mode .windows-mica-frame {
     rgba(255, 255, 255, 0) 45%
   ) !important;
   backdrop-filter: blur(22px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
 }
 
 html.light-mode .windows-mica-frame[data-window-active="false"] {
   background-color: rgba(236, 236, 236, 0.94) !important;
   background-image: none !important;
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .windows-mica-frame[data-window-interacting="true"],
@@ -2566,6 +2570,7 @@ html.light-mode .windows-mica-frame[data-window-active="false"] {
 html.light-mode .windows-mica-frame[data-window-interacting="true"],
 html.light-mode .windows-mica-frame[data-window-minimized="true"] {
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html.windows-mode .window-content-area:not([data-has-embedded-sidebar="true"]),
@@ -3341,10 +3346,7 @@ button:hover > .settings-icon-hoverable,
   background-color: var(--ui-accent) !important;
   background-image: none !important;
   border: none !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.3),
-    0 3px 12px rgba(76, 194, 255, 0.38) !important;
+  box-shadow: none !important;
   color: #ffffff !important;
   transform: scale(1);
   transition:
@@ -3382,10 +3384,7 @@ button:hover > .settings-icon-hoverable,
 #btn-top-settings-apply-checkbox:hover {
   background-color: var(--ui-accent) !important;
   background-image: none !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.4),
-    0 5px 18px rgba(76, 194, 255, 0.48) !important;
+  box-shadow: none !important;
   transform: none !important;
 }
 
@@ -3410,17 +3409,13 @@ html.light-mode #btn-top-settings-apply-checkbox {
   background-image: none !important;
   border: none !important;
   color: #ffffff !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-    0 2px 8px rgba(0, 95, 184, 0.35) !important;
+  box-shadow: none !important;
 }
 
 html.light-mode #btn-top-settings-apply-checkbox:hover {
   background-color: #0067c0 !important;
   background-image: none !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
-    0 4px 12px rgba(0, 95, 184, 0.45) !important;
+  box-shadow: none !important;
 }
 
 html.light-mode #btn-top-settings-apply-checkbox:active {
@@ -4096,7 +4091,7 @@ button[class*="bg-[#4cc2ff]"],
 #btn-home-join-discord {
   background-color: var(--ui-accent) !important;
   border-bottom: none !important;
-  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.42) !important;
+  box-shadow: none !important;
   color: #ffffff !important;
 }
 
@@ -4104,7 +4099,7 @@ button[class*="bg-[#4cc2ff]"],
 #btn-home-join-discord:hover {
   background-color: var(--ui-accent) !important;
   border-bottom: none !important;
-  box-shadow: 0 6px 20px rgba(88, 101, 242, 0.55) !important;
+  box-shadow: none !important;
   transform: none !important;
 }
 
@@ -4124,9 +4119,7 @@ button[class*="bg-[#4cc2ff]"],
 .btn-fd932f {
   background-color: var(--ui-accent) !important;
   border-bottom: none !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3),
-    0 3px 12px rgba(76, 194, 255, 0.38) !important;
+  box-shadow: none !important;
   color: #ffffff !important;
 }
 
@@ -4158,10 +4151,7 @@ button.bg-\[\#4cc2ff\]:hover,
 button[class*="bg-[#4cc2ff]"]:hover,
 .btn-fd932f:hover {
   background-color: var(--ui-accent) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.4),
-    0 5px 18px rgba(76, 194, 255, 0.48) !important;
+  box-shadow: none !important;
   transform: none !important;
 }
 
@@ -4941,20 +4931,14 @@ html.light-mode .btn-fd932f {
 html.light-mode #btn-discord-join,
 html.light-mode #btn-home-join-discord {
   background-color: var(--ui-accent) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.4),
-    0 3px 12px rgba(88, 101, 242, 0.35) !important;
+  box-shadow: none !important;
   color: #ffffff !important;
 }
 
 html.light-mode #btn-discord-join:hover,
 html.light-mode #btn-home-join-discord:hover {
   background-color: var(--ui-accent) !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.5),
-    0 5px 16px rgba(88, 101, 242, 0.5) !important;
+  box-shadow: none !important;
 }
 
 html.light-mode #btn-changelogs-read,
@@ -4973,9 +4957,7 @@ html.light-mode button[class*="bg-[#4cc2ff]"],
 html.light-mode .btn-fd932f {
   background-color: var(--ui-accent) !important;
   background-image: none !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-    0 2px 6px rgba(0, 95, 184, 0.3) !important;
+  box-shadow: none !important;
   color: #ffffff !important;
 }
 
@@ -4995,9 +4977,7 @@ html.light-mode button[class*="bg-[#4cc2ff]"]:hover,
 html.light-mode .btn-fd932f:hover {
   background-color: #0067c0 !important;
   background-image: none !important;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45),
-    0 4px 12px rgba(0, 95, 184, 0.4) !important;
+  box-shadow: none !important;
   transform: none !important;
   color: #ffffff !important;
 }
@@ -9041,14 +9021,12 @@ html.light-mode #home-about-community-card p {
 
 .floaty-bar-pill-indicator {
   border-radius: 9999px !important;
-  /* Soft glow around the selected tab, contained strictly within the tab bar bounds */
-  box-shadow: 0 0 10px 1px rgba(76, 194, 255, 0.42) !important;
+  box-shadow: none !important;
   z-index: 5 !important;
 }
 
 html.light-mode .floaty-bar-pill-indicator {
-  /* Soft glow around the selected tab in light mode, contained within tab bar */
-  box-shadow: 0 0 8px 1px rgba(76, 194, 255, 0.35) !important;
+  box-shadow: none !important;
   z-index: 5 !important;
 }
 
@@ -10621,7 +10599,7 @@ html.light-mode .fluent-input-box::before,
   [class*="rgba(0,120,212"],
   [class*="rgba(0, 120, 212"]
 ) {
-  box-shadow: 0 0 12px color-mix(in srgb, var(--ui-accent) 45%, transparent) !important;
+  box-shadow: none !important;
 }
 
 :is(
@@ -11707,6 +11685,40 @@ html.light-mode #sparkle-oobe-debug-root [class*="text-white"] {
   color: #ffffff !important;
 }
 
+/* Desktop icons always render crisp white labels with drop shadow even in Light Mode */
+html.light-mode [data-desktop-icon-item],
+html.light-mode [data-desktop-icon-item] span {
+  color: #ffffff !important;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.96),
+    0 2px 6px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.72),
+    0 0 2px rgba(0, 0, 0, 0.95) !important;
+  filter: drop-shadow(0 1.5px 3px rgba(0, 0, 0, 0.75)) !important;
+}
+
+/* Weather forecast atmospheric pane stays crisp white over its sky backdrop in Light Mode */
+html.light-mode #winui-weather-forecast-pane,
+html.light-mode #winui-weather-forecast-pane .text-white,
+html.light-mode #winui-weather-forecast-pane [class*="text-white"] {
+  color: #ffffff !important;
+}
+
+html.light-mode #winui-weather-forecast-pane svg.lucide {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+html.light-mode #winui-weather-forecast-pane svg.lucide * {
+  stroke: currentColor !important;
+}
+
+html.light-mode [data-desktop-icon-item] input {
+  color: #ffffff !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
 /* Windows Taskbar: deep dead-center inward press sink on every clickable icon */
 #windows-taskbar .taskbar-press-btn .taskbar-press-icon {
   transform-origin: center center !important;
@@ -11788,4 +11800,106 @@ html.light-mode #windows-control-center .cc-control-tile[data-colored="true"] sv
 html.light-mode #windows-control-center .cc-control-tile[data-colored="true"] svg * {
   color: #ffffff !important;
   stroke: #ffffff !important;
+}
+
+/* Zero outer glow on #43AAE0, #0057A2, and primary blue accent buttons in all states */
+:is(
+  button,
+  [role="button"],
+  a,
+  .fluent-btn-primary,
+  .btn-fd932f,
+  #btn-top-settings-apply-checkbox,
+  #btn-settings-save,
+  #btn-settings-subpage-save,
+  #btn-changelogs-read,
+  #btn-test-vplay-switch,
+  #btn-welcome-close,
+  #btn-under-construction-close,
+  #btn-devmode-close,
+  #btn-hero-watch-now,
+  #btn-add-stream-submit,
+  #btn-discord-join,
+  #btn-home-join-discord
+):is(
+  .fluent-btn-primary,
+  .btn-fd932f,
+  #btn-top-settings-apply-checkbox,
+  #btn-settings-save,
+  #btn-settings-subpage-save,
+  #btn-changelogs-read,
+  #btn-test-vplay-switch,
+  #btn-welcome-close,
+  #btn-under-construction-close,
+  #btn-devmode-close,
+  #btn-hero-watch-now,
+  #btn-add-stream-submit,
+  #btn-discord-join,
+  #btn-home-join-discord,
+  [class*="bg-[#43aae0]"],
+  [class*="bg-[#43AAE0]"],
+  [class*="bg-[#0057a2]"],
+  [class*="bg-[#0057A2]"],
+  [class*="bg-[#4cc2ff]"],
+  [class*="bg-[#4CC2FF]"],
+  [class*="bg-[#0067b8]"],
+  [class*="bg-[#0067B8]"],
+  [class*="bg-[#0063b8]"],
+  [class*="bg-[#0063B8]"],
+  [class*="bg-[#005fb8]"],
+  [class*="bg-[#005FB8]"],
+  [class*="bg-[#0078d4]"],
+  [class*="bg-[#0078D4]"],
+  [style*="--ui-accent"]
+),
+:is(
+    button,
+    [role="button"],
+    a,
+    .fluent-btn-primary,
+    .btn-fd932f,
+    #btn-top-settings-apply-checkbox,
+    #btn-settings-save,
+    #btn-settings-subpage-save,
+    #btn-changelogs-read,
+    #btn-test-vplay-switch,
+    #btn-welcome-close,
+    #btn-under-construction-close,
+    #btn-devmode-close,
+    #btn-hero-watch-now,
+    #btn-add-stream-submit,
+    #btn-discord-join,
+    #btn-home-join-discord
+  ):is(
+    .fluent-btn-primary,
+    .btn-fd932f,
+    #btn-top-settings-apply-checkbox,
+    #btn-settings-save,
+    #btn-settings-subpage-save,
+    #btn-changelogs-read,
+    #btn-test-vplay-switch,
+    #btn-welcome-close,
+    #btn-under-construction-close,
+    #btn-devmode-close,
+    #btn-hero-watch-now,
+    #btn-add-stream-submit,
+    #btn-discord-join,
+    #btn-home-join-discord,
+    [class*="bg-[#43aae0]"],
+    [class*="bg-[#43AAE0]"],
+    [class*="bg-[#0057a2]"],
+    [class*="bg-[#0057A2]"],
+    [class*="bg-[#4cc2ff]"],
+    [class*="bg-[#4CC2FF]"],
+    [class*="bg-[#0067b8]"],
+    [class*="bg-[#0067B8]"],
+    [class*="bg-[#0063b8]"],
+    [class*="bg-[#0063B8]"],
+    [class*="bg-[#005fb8]"],
+    [class*="bg-[#005FB8]"],
+    [class*="bg-[#0078d4]"],
+    [class*="bg-[#0078D4]"],
+    [style*="--ui-accent"]
+  ):is(:hover, :active, :focus, :focus-visible) {
+  box-shadow: none !important;
 }

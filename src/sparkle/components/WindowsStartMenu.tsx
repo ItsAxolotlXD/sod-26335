@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck -- ported as-is from the original Sparkle project, which was not written for this strict TypeScript setup.
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -223,7 +223,8 @@ export const WindowsStartMenu: React.FC<WindowsStartMenuProps> = ({
   const galleryFoldersRef = useRef<GalleryFolder[]>([]);
   const wasOpenRef = useRef(false);
   const isStartConcept = Boolean(settings.startLayoutConcept);
-  const [conceptTab, setConceptTabState] = useState<StartConceptTab>("for-you");
+  const [conceptTab, setConceptTabState] = useState<StartConceptTab>("pinned");
+  const [lockedConceptHeight, setLockedConceptHeight] = useState<number | null>(null);
   const setConceptTab = (tab: StartConceptTab) => {
     setConceptTabState(tab);
     setShowAllApps(tab === "all");
@@ -482,6 +483,18 @@ export const WindowsStartMenu: React.FC<WindowsStartMenuProps> = ({
       .slice(0, 4);
   }, [isOpen, channels, query]);
 
+  const matchedSodver = useMemo(() => {
+    if (!isOpen) return false;
+    const q = query.trim().toLowerCase();
+    if (!q) return false;
+    return (
+      q === "sodver" ||
+      q === "winver" ||
+      (q.length >= 3 && "sodver".startsWith(q)) ||
+      (q.length >= 4 && "about sodium".includes(q))
+    );
+  }, [isOpen, query]);
+
   const recommendedItems = useMemo(() => {
     if (!isOpen) return [];
     const items: Array<{
@@ -640,11 +653,49 @@ export const WindowsStartMenu: React.FC<WindowsStartMenuProps> = ({
     onClose,
   ]);
 
+  useLayoutEffect(() => {
+    if (!isOpen || !isStartConcept || query.trim()) {
+      if (!isOpen || query.trim()) {
+        setLockedConceptHeight(null);
+      }
+      return;
+    }
+    if (conceptTab === "pinned" && menuRef.current) {
+      const prevHeight = menuRef.current.style.height;
+      menuRef.current.style.height = "";
+      const naturalHeight = menuRef.current.offsetHeight;
+      menuRef.current.style.height = prevHeight;
+      if (naturalHeight > 0) {
+        setLockedConceptHeight(naturalHeight);
+      }
+    }
+  }, [isOpen, isStartConcept, conceptTab, query, pinnedEntries.length]);
+
+  useEffect(() => {
+    if (!isOpen || !isStartConcept) return;
+    const handleResize = () => {
+      if (conceptTab === "pinned" && menuRef.current && !query.trim()) {
+        const prevHeight = menuRef.current.style.height;
+        menuRef.current.style.height = "";
+        const naturalHeight = menuRef.current.offsetHeight;
+        menuRef.current.style.height = prevHeight;
+        if (naturalHeight > 0) {
+          setLockedConceptHeight(naturalHeight);
+        }
+      } else {
+        setLockedConceptHeight(null);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isOpen, isStartConcept, conceptTab, query]);
+
   useEffect(() => {
     if (!isOpen) {
       setQuery("");
       setShowAllApps(false);
-      setConceptTabState("for-you");
+      setConceptTabState("pinned");
+      setLockedConceptHeight(null);
       setIsPowerMenuOpen(false);
       setStartContextMenu(null);
       setAppContextMenu(null);
@@ -783,6 +834,10 @@ export const WindowsStartMenu: React.FC<WindowsStartMenuProps> = ({
                   backdropFilter: "blur(42px) saturate(180%)",
                   WebkitBackdropFilter: "blur(42px) saturate(180%)",
                   zoom: uiScaleMult,
+                  height:
+                    isStartConcept && !query.trim() && lockedConceptHeight
+                      ? `${lockedConceptHeight}px`
+                      : undefined,
                 }}
                 className={`pointer-events-auto w-full ${isStartConcept ? "max-w-[760px] !border-0 !outline-none" : "max-w-[620px] border border-black/10 dark:border-white/[0.12]"} max-h-[calc(100vh-76px)] rounded-[12px] shadow-none flex flex-col overflow-hidden select-none text-[#111827] dark:text-white`}
               >
@@ -828,7 +883,15 @@ export const WindowsStartMenu: React.FC<WindowsStartMenuProps> = ({
                     id="windows-start-search-box"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (filteredApps.length > 0) {
+                      const q = query.trim().toLowerCase();
+                      if (
+                        q === "sodver" ||
+                        q === "winver" ||
+                        (matchedSodver && filteredApps.length === 0)
+                      ) {
+                        onLaunchRoute("/sodver");
+                        onClose();
+                      } else if (filteredApps.length > 0) {
                         handleLaunchApp(filteredApps[0]);
                       } else if (matchedChannels.length > 0) {
                         const ch = matchedChannels[0];
@@ -1095,35 +1158,61 @@ export const WindowsStartMenu: React.FC<WindowsStartMenuProps> = ({
                           })}
                         </div>
                       ) : query.trim() ? (
-                        <div
-                          className={`grid grid-cols-4 ${isStartConcept ? "gap-y-3 gap-x-1.5" : "sm:grid-cols-6 gap-1.5"}`}
-                        >
-                          {filteredApps.map((app) => (
+                        <div className="space-y-2.5">
+                          {matchedSodver && (
                             <button
-                              key={app.id}
                               type="button"
-                              draggable
-                              onDragStart={(e) =>
-                                setSodiumDragData(e, {
-                                  kind: "app",
-                                  appId: app.id,
-                                  label: app.label,
-                                  route: app.route || "/",
-                                  externalUrl: app.externalUrl,
-                                })
-                              }
-                              onClick={() => handleLaunchApp(app)}
-                              onContextMenu={(e) => openAppContextMenu(e, app)}
-                              className="group py-2.5 px-1.5 rounded-[6px] flex flex-col items-center justify-center gap-1.5 hover:bg-black/[0.06] dark:hover:bg-white/[0.08] active:scale-95 transition-all cursor-pointer border-none"
+                              onClick={() => {
+                                onLaunchRoute("/sodver");
+                                onClose();
+                              }}
+                              className="w-full px-3 py-2 rounded-[6px] flex items-center gap-3 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.11] transition-colors cursor-pointer text-left border border-black/[0.06] dark:border-white/[0.08]"
                             >
-                              <div className="w-9 h-9 flex items-center justify-center group-hover:scale-105 transition-transform">
-                                {app.renderIcon("w-8 h-8")}
+                              <img
+                                src="/assets/aistudio/image_3602759f.png"
+                                alt="About Sodium"
+                                className="w-7 h-7 object-contain shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[13px] font-semibold text-[#111827] dark:text-white truncate">
+                                  About Sodium
+                                </div>
+                                <div className="text-[11px] text-[#6b7280] dark:text-[#9ca3af] truncate">
+                                  Run command · sodver
+                                </div>
                               </div>
-                              <span className="text-[11.5px] font-normal text-center leading-tight line-clamp-1 max-w-full">
-                                {app.label}
-                              </span>
                             </button>
-                          ))}
+                          )}
+                          <div
+                            className={`grid grid-cols-4 ${isStartConcept ? "gap-y-3 gap-x-1.5" : "sm:grid-cols-6 gap-1.5"}`}
+                          >
+                            {filteredApps.map((app) => (
+                              <button
+                                key={app.id}
+                                type="button"
+                                draggable
+                                onDragStart={(e) =>
+                                  setSodiumDragData(e, {
+                                    kind: "app",
+                                    appId: app.id,
+                                    label: app.label,
+                                    route: app.route || "/",
+                                    externalUrl: app.externalUrl,
+                                  })
+                                }
+                                onClick={() => handleLaunchApp(app)}
+                                onContextMenu={(e) => openAppContextMenu(e, app)}
+                                className="group py-2.5 px-1.5 rounded-[6px] flex flex-col items-center justify-center gap-1.5 hover:bg-black/[0.06] dark:hover:bg-white/[0.08] active:scale-95 transition-all cursor-pointer border-none"
+                              >
+                                <div className="w-9 h-9 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                  {app.renderIcon("w-8 h-8")}
+                                </div>
+                                <span className="text-[11.5px] font-normal text-center leading-tight line-clamp-1 max-w-full">
+                                  {app.label}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         <div

@@ -409,6 +409,16 @@ export const TabIcon: React.FC<{
     return <FluentLiveTvIcon className={`${iconClass} text-black dark:text-white`} />;
   }
 
+  if (route.startsWith("/sodver")) {
+    return (
+      <img
+        src="/assets/aistudio/image_3602759f.png"
+        alt="About Sodium"
+        className={`${iconClass} shrink-0 object-contain`}
+      />
+    );
+  }
+
   // Fallback
   return <FluentHomeIcon className={`${iconClass} text-black dark:text-white`} />;
 };

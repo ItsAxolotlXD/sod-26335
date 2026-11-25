@@ -25,7 +25,7 @@ export const START_APPS: readonly StartAppDef[] = [
   },
   {
     id: "app-gallery",
-    label: "Gallery",
+    label: "Photos Gallery",
     route: "/gallery",
     keywords: "gallery photos media album anh",
   },
@@ -113,6 +113,12 @@ export const START_APPS: readonly StartAppDef[] = [
     label: "Settings",
     route: "/settings",
     keywords: "settings cai dat preferences",
+  },
+  {
+    id: "app-sodver",
+    label: "About Sodium",
+    route: "/sodver",
+    keywords: "about sodium sodver winver version build os info",
   },
   {
     id: "app-insider",

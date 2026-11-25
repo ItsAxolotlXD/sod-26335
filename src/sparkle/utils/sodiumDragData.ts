@@ -79,6 +79,11 @@ export type SodiumDragPayload =
       itemKind: string;
       dragOffsetX?: number | undefined;
       dragOffsetY?: number | undefined;
+    }
+  | {
+      kind: "widget";
+      widgetId: string;
+      title: string;
     };
 
 export function setSodiumDragData(
@@ -92,7 +97,10 @@ export function setSodiumDragData(
       const label =
         payload.kind === "app"
           ? payload.label
-          : payload.kind === "setting" || payload.kind === "article" || payload.kind === "note"
+          : payload.kind === "setting" ||
+              payload.kind === "article" ||
+              payload.kind === "note" ||
+              payload.kind === "widget"
             ? payload.title
             : payload.name;
       e.dataTransfer.setData("text/plain", label);

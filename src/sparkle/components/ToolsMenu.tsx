@@ -748,7 +748,7 @@ export const ToolsMenu: React.FC<ToolsMenuProps> = ({
               >
                 <div className="flex items-center gap-2.5 truncate">
                   <FluentGalleryIcon className="w-4 h-4 text-[#111827] dark:text-white shrink-0" />
-                  <span className="truncate">Gallery</span>
+                  <span className="truncate">Photos Gallery</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-[2px] bg-black/5 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 font-medium">
                   Bộ sưu tập

@@ -10,8 +10,12 @@ import {
 } from "./pinStore";
 
 describe("taskbar pins", () => {
-  it("starts with File Explorer and Watch pinned", () => {
-    expect(DEFAULT_TASKBAR_PINS.map((p) => p.route)).toEqual(["/file-explorer", "/live-tv"]);
+  it("starts with File Explorer, Watch, and Photos Gallery pinned", () => {
+    expect(DEFAULT_TASKBAR_PINS.map((p) => p.route)).toEqual([
+      "/file-explorer",
+      "/live-tv",
+      "/gallery",
+    ]);
   });
 
   it("pins an open window under its app route, not the window URL", () => {
@@ -21,7 +25,7 @@ describe("taskbar pins", () => {
 
   it("does not pin the same app twice", () => {
     const pins = addTaskbarPin(DEFAULT_TASKBAR_PINS, "/live-tv?channel=vtv1", "VTV1");
-    expect(pins).toHaveLength(2);
+    expect(pins).toHaveLength(3);
   });
 
   it("unpinning removes the app from the taskbar", () => {
@@ -33,6 +37,7 @@ describe("taskbar pins", () => {
   it("keeps the existing slot ids for the default pins", () => {
     expect(taskbarPinId("/file-explorer")).toBe("pin-file-explorer");
     expect(taskbarPinId("/live-tv")).toBe("pin-live-tv");
+    expect(taskbarPinId("/gallery")).toBe("pin-gallery");
   });
 });
 

@@ -27,6 +27,7 @@ export function getAppGroup(route: string): string {
   if (b === "/calculator" || b.startsWith("/calculator/")) return "calculator";
   if (b === "/weather" || b.startsWith("/weather/")) return "weather";
   if (b === "/settings" || b.startsWith("/settings")) return "settings";
+  if (b === "/sodver" || b.startsWith("/sodver/")) return "sodver";
   return b;
 }
 
@@ -44,6 +45,7 @@ const GROUP_LAUNCH_ROUTES: Record<string, string> = {
   calculator: "/calculator",
   weather: "/weather",
   settings: "/settings",
+  sodver: "/sodver",
 };
 
 /** The route a fresh window of this app starts on (its home screen, not the current page). */
@@ -53,7 +55,7 @@ export function getAppLaunchRoute(route: string): string {
 }
 
 /** Apps that, like Windows Settings, only ever have one window. */
-const SINGLE_INSTANCE_GROUPS = new Set(["settings", "pc-settings"]);
+const SINGLE_INSTANCE_GROUPS = new Set(["settings", "pc-settings", "sodver"]);
 
 export function isSingleInstanceApp(route: string): boolean {
   return SINGLE_INSTANCE_GROUPS.has(getAppGroup(route));

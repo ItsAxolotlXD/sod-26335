@@ -20,7 +20,7 @@ const TOAST_SOURCES: Record<AppToastSource, { label: string; Icon: typeof Settin
   search: { label: "Search", Icon: Search },
   sidebar: { label: "Sidebar", Icon: PanelLeft },
   "live-tv": { label: "Live TV", Icon: Tv },
-  gallery: { label: "Gallery", Icon: Images },
+  gallery: { label: "Photos Gallery", Icon: Images },
   camera: { label: "Camera", Icon: Camera },
 };
 

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Minus, Square, X, ArrowLeft, Menu } from "lucide-react";
 import { TabIcon, type AppTab } from "./SparkleTabBar";
 import { StartMenuRouteIcon } from "./StartAppIcons";
+import { SpinningRing } from "./SpinningRing";
 import {
   useSettings,
   getTaskbarThicknessPx,
@@ -49,6 +50,8 @@ export function isWindowSidebarExcludedRoute(route: string): boolean {
   if (base === "/weather" || base.startsWith("/weather/")) return true;
   if (base === "/camera" || base.startsWith("/camera/")) return true;
   if (base === "/craftmine" || base === "/photopea") return true;
+  if (base === "/sodver" || base === "/sodver/") return true;
+  if (base.startsWith("/sodver/")) return true;
   if (base === "/auth" || base === "/reset-password" || base === "/search") return true;
   return false;
 }
@@ -56,6 +59,11 @@ export function isWindowSidebarExcludedRoute(route: string): boolean {
 export const WindowTitleBarPortalContext = createContext<{
   titleBarSlotEl: HTMLDivElement | null;
   isInsideWindowFrame: boolean;
+  isCompactWindow?: boolean;
+  isWindowSidebarCollapsed?: boolean;
+  isWindowSidebarDrawerOpen?: boolean;
+  onToggleWindowSidebar?: () => void;
+  onCloseWindowSidebarDrawer?: () => void;
 }>({
   titleBarSlotEl: null,
   isInsideWindowFrame: false,
@@ -122,10 +130,13 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
   const { settings } = useSettings();
   const dynamicIcons = settings.dynamicSidebarIcons !== false;
   const reduceMotion = settings.reduceAllMotion;
+  const isSodverRoute = tab.route === "/sodver" || tab.route.startsWith("/sodver/");
+  const canMaximize = !isSodverRoute;
+  const effectiveIsMaximized = canMaximize ? windowState.isMaximized : false;
   const taskbarLocation = settings.taskbarLocation || "bottom";
   const taskbarThickness = getTaskbarThicknessPx(
     settings.taskbarScale,
-    !windowState.isMaximized && isTaskbarFloating,
+    !effectiveIsMaximized && isTaskbarFloating,
     taskbarLocation,
   );
   const uiScaleMult = getWindowsUiScaleMultiplier(settings.windowsUiScale);
@@ -165,7 +176,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
     setShowLaunchSplash(true);
     const timer = window.setTimeout(() => setShowLaunchSplash(false), 3000);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [tab.id]);
 
   useEffect(() => {
     const onResize = () => {
@@ -176,7 +187,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
   }, []);
 
   const isDesktop = viewport.width >= 768;
-  const floatingGap = !windowState.isMaximized && isTaskbarFloating ? FLOAT_BAR_BOTTOM_GAP_PX : 0;
+  const floatingGap = !effectiveIsMaximized && isTaskbarFloating ? FLOAT_BAR_BOTTOM_GAP_PX : 0;
   const taskbarOffset = settings.windowsMode ? taskbarThickness + floatingGap : 0;
   const baseDesktopMinX = isDesktop && !isRightSidebar ? sidebarOffset : 0;
   const baseDesktopMaxX =
@@ -233,6 +244,8 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
 
   const latestRef = useRef({
     windowState,
+    canMaximize,
+    effectiveIsMaximized,
     desktopMinX,
     desktopMaxX,
     desktopMinY,
@@ -243,6 +256,8 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
   });
   latestRef.current = {
     windowState,
+    canMaximize,
+    effectiveIsMaximized,
     desktopMinX,
     desktopMaxX,
     desktopMinY,
@@ -266,7 +281,11 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
       const target = e.target as HTMLElement | null;
       if (target?.closest(NO_DRAG_SELECTOR)) return;
 
-      const { windowState: ws, onFocus: focusWin } = latestRef.current;
+      const {
+        windowState: ws,
+        effectiveIsMaximized: wasMax,
+        onFocus: focusWin,
+      } = latestRef.current;
       focusWin();
       setIsInteracting(true);
 
@@ -276,7 +295,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
         startY: e.clientY,
         origX: ws.x,
         origY: ws.y,
-        wasMaximized: ws.isMaximized,
+        wasMaximized: wasMax,
         restoredWidth: ws.width,
         restoredHeight: ws.height,
         hasUnmaximized: false,
@@ -284,6 +303,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
     };
 
     const onNativeDblClick = (e: MouseEvent) => {
+      if (!latestRef.current.canMaximize) return;
       const target = e.target as HTMLElement | null;
       if (target?.closest(NO_DRAG_SELECTOR)) return;
       latestRef.current.onToggleMaximize();
@@ -414,7 +434,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
 
   const handleResizePointerDown = useCallback(
     (dir: ResizeDirection, e: React.PointerEvent<HTMLDivElement>) => {
-      if (e.button !== 0 || windowState.isMaximized) return;
+      if (e.button !== 0 || effectiveIsMaximized) return;
       e.preventDefault();
       e.stopPropagation();
       onFocus();
@@ -445,7 +465,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
       };
     },
     [
-      windowState.isMaximized,
+      effectiveIsMaximized,
       windowState.x,
       windowState.y,
       windowState.width,
@@ -458,16 +478,14 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
   const maxWidth = Math.max(320, desktopMaxX - desktopMinX);
   const maxHeight = Math.max(240, desktopMaxY - desktopMinY);
 
-  const computedLeft = windowState.isMaximized
+  const computedLeft = effectiveIsMaximized
     ? desktopMinX
     : Math.max(desktopMinX - windowState.width + 120, Math.min(windowState.x, desktopMaxX - 120));
-  const computedTop = windowState.isMaximized
+  const computedTop = effectiveIsMaximized
     ? desktopMinY
     : Math.max(desktopMinY, Math.min(windowState.y, Math.max(desktopMinY, desktopMaxY - 36)));
-  const computedWidth = windowState.isMaximized ? maxWidth : Math.min(windowState.width, maxWidth);
-  const computedHeight = windowState.isMaximized
-    ? maxHeight
-    : Math.min(windowState.height, maxHeight);
+  const computedWidth = effectiveIsMaximized ? maxWidth : Math.min(windowState.width, maxWidth);
+  const computedHeight = effectiveIsMaximized ? maxHeight : Math.min(windowState.height, maxHeight);
 
   const resizeHandles: Array<{ dir: ResizeDirection; className: string; cursor: string }> = [
     { dir: "n", className: "-top-[5px] left-3 right-3 h-[9px] z-[120]", cursor: "ns-resize" },
@@ -479,6 +497,8 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
     { dir: "sw", className: "-bottom-[6px] -left-[6px] w-4 h-4 z-[121]", cursor: "nesw-resize" },
     { dir: "se", className: "-bottom-[6px] -right-[6px] w-4 h-4 z-[121]", cursor: "nwse-resize" },
   ];
+
+  const isWeatherRoute = tab.route === "/weather" || tab.route.startsWith("/weather/");
 
   const isCustomRouteFull =
     tab.route === "/craftmine" ||
@@ -493,11 +513,13 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
     tab.route === "/notepad" ||
     tab.route.startsWith("/notepad/") ||
     tab.route === "/file-explorer" ||
-    tab.route.startsWith("/file-explorer/");
+    tab.route.startsWith("/file-explorer/") ||
+    isWeatherRoute;
 
   const showEmbeddedSidebar = Boolean(
     settings.windowsMode && renderWindowSidebar && !isWindowSidebarExcludedRoute(tab.route),
   );
+  const showTitleBarHamburger = showEmbeddedSidebar || (settings.windowsMode && isWeatherRoute);
   const isCompactWindow = computedWidth < 680;
   const embeddedSidebarNode = showEmbeddedSidebar
     ? renderWindowSidebar?.({
@@ -577,7 +599,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
       } ${isInteracting ? "select-none" : ""}`}
     >
       {/* 8-Direction Resize Handles when restored (straddle perimeter outside clipped frame) */}
-      {!windowState.isMaximized &&
+      {!effectiveIsMaximized &&
         resizeHandles.map((handle) => (
           <div
             key={handle.dir}
@@ -594,7 +616,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
         data-window-interacting={isInteracting ? "true" : "false"}
         data-window-minimized={windowState.isMinimized ? "true" : "false"}
         className={`windows-mica-frame relative w-full h-full flex flex-col overflow-hidden ${
-          windowState.isMaximized
+          effectiveIsMaximized
             ? "rounded-none border-0"
             : "rounded-[10px] border border-black/15 dark:border-white/[0.14]"
         } ${
@@ -608,15 +630,15 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
           ref={titleBarRef}
           style={{
             height: `${effectiveTitleBarHeight}px`,
-            ...(showEmbeddedSidebar ? getWindowSidebarSurfaceStyle(settings.theme) : {}),
+            ...(showTitleBarHamburger ? getWindowSidebarSurfaceStyle(settings.theme) : {}),
           }}
           className={`relative z-10 shrink-0 flex items-center justify-between pl-2.5 pr-0 select-none cursor-default ${
-            showEmbeddedSidebar ? "" : "bg-transparent"
+            showTitleBarHamburger ? "" : "bg-transparent"
           } ${isActive ? "text-[#111827] dark:text-white" : "text-[#6b7280] dark:text-[#9ca3af]"}`}
         >
           {/* Left: Hamburger (left edge) + optional Back + Merged Tab Bar OR App Icon + Title */}
           <div className="flex items-center gap-1.5 min-w-0 flex-1 h-full pr-2">
-            {showEmbeddedSidebar && (
+            {showTitleBarHamburger && (
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.92 }}
@@ -686,32 +708,32 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
               <Minus className="w-3.5 h-3.5 stroke-[1.75]" />
             </button>
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleMaximize();
-              }}
-              aria-label={
-                windowState.isMaximized ? `Restore ${tab.title}` : `Maximize ${tab.title}`
-              }
-              className="w-[42px] h-full flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/[0.08] active:bg-black/10 dark:active:bg-white/15 transition-colors cursor-pointer border-none"
-            >
-              {windowState.isMaximized ? (
-                <svg
-                  className="w-3 h-3"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                >
-                  <rect x="1.5" y="3.5" width="7" height="7" rx="1" />
-                  <path d="M3.5 3.5V2.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8.5" />
-                </svg>
-              ) : (
-                <Square className="w-3 h-3 stroke-[1.75]" />
-              )}
-            </button>
+            {canMaximize && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleMaximize();
+                }}
+                aria-label={effectiveIsMaximized ? `Restore ${tab.title}` : `Maximize ${tab.title}`}
+                className="w-[42px] h-full flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/[0.08] active:bg-black/10 dark:active:bg-white/15 transition-colors cursor-pointer border-none"
+              >
+                {effectiveIsMaximized ? (
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  >
+                    <rect x="1.5" y="3.5" width="7" height="7" rx="1" />
+                    <path d="M3.5 3.5V2.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8.5" />
+                  </svg>
+                ) : (
+                  <Square className="w-3 h-3 stroke-[1.75]" />
+                )}
+              </button>
+            )}
 
             <button
               type="button"
@@ -745,7 +767,10 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
               className={`window-content-area w-full h-full ${
                 hasMergedTabBar ||
                 tab.route === "/calculator" ||
-                tab.route.startsWith("/calculator/")
+                tab.route.startsWith("/calculator/") ||
+                tab.route === "/sodver" ||
+                tab.route.startsWith("/sodver/") ||
+                isWeatherRoute
                   ? "overflow-hidden flex flex-col"
                   : "overflow-y-auto overflow-x-hidden"
               } relative ${
@@ -758,7 +783,10 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
                   className={`w-full ${
                     hasMergedTabBar ||
                     tab.route === "/calculator" ||
-                    tab.route.startsWith("/calculator/")
+                    tab.route.startsWith("/calculator/") ||
+                    tab.route === "/sodver" ||
+                    tab.route.startsWith("/sodver/") ||
+                    isWeatherRoute
                       ? "h-full overflow-hidden"
                       : "min-h-full"
                   } ${
@@ -779,6 +807,8 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
                     tab.route === "/camera" ||
                     tab.route === "/calculator" ||
                     tab.route.startsWith("/calculator/") ||
+                    tab.route === "/sodver" ||
+                    tab.route.startsWith("/sodver/") ||
                     tab.route === "/weather" ||
                     tab.route.startsWith("/weather/") ||
                     tab.route === "/html-writer" ||
@@ -794,7 +824,17 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
                   }`}
                 >
                   <WindowTitleBarPortalContext.Provider
-                    value={{ titleBarSlotEl, isInsideWindowFrame: true }}
+                    value={{
+                      titleBarSlotEl,
+                      isInsideWindowFrame: true,
+                      isCompactWindow,
+                      isWindowSidebarCollapsed: isWinSidebarCollapsed,
+                      isWindowSidebarDrawerOpen: isWinSidebarDrawerOpen,
+                      onToggleWindowSidebar: isCompactWindow
+                        ? () => setIsWinSidebarDrawerOpen((prev) => !prev)
+                        : toggleWinSidebarCollapse,
+                      onCloseWindowSidebarDrawer: () => setIsWinSidebarDrawerOpen(false),
+                    }}
                   >
                     {showEmbeddedSidebar ? (
                       <AnimatePresence mode="wait" initial={false}>
@@ -829,7 +869,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
           <div
             role="status"
             aria-label={`Loading ${tab.title}`}
-            className="absolute inset-0 z-[100] flex items-center justify-center"
+            className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-5"
             style={{
               backgroundColor: settings.theme === "light" ? "#ffffff" : "#202020",
               backgroundImage: "none",
@@ -838,6 +878,7 @@ const WindowFrameInner: React.FC<WindowFrameProps> = ({
             }}
           >
             <StartMenuRouteIcon route={tab.route} className="w-16 h-16 shrink-0 drop-shadow-sm" />
+            <SpinningRing size={34} ariaLabel={`Loading ${tab.title}`} />
           </div>
         )}
       </div>

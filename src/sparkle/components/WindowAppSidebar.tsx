@@ -549,7 +549,7 @@ export const WindowAppSidebar: React.FC<WindowAppSidebarProps> = ({
     if (base === "/gallery" || base.startsWith("/gallery/")) {
       const activeFilter = state.appFilter || "all";
       return {
-        headerLabel: "Gallery",
+        headerLabel: "Photos Gallery",
         entries: [
           {
             kind: "item",

@@ -67,6 +67,7 @@ export interface SystemSettings {
   floatBar: boolean;
   floatBarVersion?: number;
   startLayoutConcept: boolean;
+  startLayoutConceptVersion?: number;
   windowsWallpaper: string;
   spotlightInterval: SpotlightInterval;
   spotlightTarget: SpotlightTarget;
@@ -145,7 +146,8 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   windowsModeVersion: 1,
   floatBar: true,
   floatBarVersion: 1,
-  startLayoutConcept: false,
+  startLayoutConcept: true,
+  startLayoutConceptVersion: 1,
   windowsWallpaper: "waves-ocean-dark",
   spotlightInterval: "1m",
   spotlightTarget: "both",
@@ -352,7 +354,12 @@ export const getStoredSettings = (): SystemSettings => {
             : true,
         floatBarVersion: 1,
         startLayoutConcept:
-          typeof parsed.startLayoutConcept === "boolean" ? parsed.startLayoutConcept : false,
+          parsed.startLayoutConceptVersion === 1
+            ? typeof parsed.startLayoutConcept === "boolean"
+              ? parsed.startLayoutConcept
+              : true
+            : true,
+        startLayoutConceptVersion: 1,
         windowsWallpaper: WINDOWS_WALLPAPERS.some((w) => w.id === parsed.windowsWallpaper)
           ? parsed.windowsWallpaper
           : theme === "dark"

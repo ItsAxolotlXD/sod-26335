@@ -218,11 +218,11 @@ export const TaskbarWeatherIcon: React.FC<TaskbarWeatherIconProps> = ({
             </linearGradient>
           </defs>
           <path
-            d="M31.8 30.6A12.5 12.5 0 0 1 17.4 16.2a12.6 12.6 0 0 1 2.2-7.1 13.5 13.5 0 1 0 19.3 19.3 12.6 12.6 0 0 1-7.1 2.2Z"
+            d="M23.9 8.8A16.5 16.5 0 1 0 34.5 34.5a14.2 14.2 0 0 1-10.6-25.7Z"
             fill={`url(#${uid}_moon)`}
           />
-          <circle cx="34" cy="13" r="2" fill="#FEF08A" />
-          <circle cx="38" cy="20" r="1.4" fill="#FDE047" />
+          <circle cx="35.5" cy="12.5" r="2.1" fill="#FEF08A" />
+          <circle cx="39" cy="19.5" r="1.5" fill="#FDE047" />
         </svg>
       );
     }
@@ -290,10 +290,7 @@ export const TaskbarWeatherIcon: React.FC<TaskbarWeatherIconProps> = ({
         {isDay ? (
           <circle cx="30" cy="17" r="9.5" fill={`url(#${uid}_psun)`} />
         ) : (
-          <path
-            d="M33 21.5a7.5 7.5 0 0 1-8.5-8.5 8 8 0 1 0 10.5 10.5 7.2 7.2 0 0 1-2-.2Z"
-            fill="#FDE047"
-          />
+          <path d="M33.5 8.3A9.5 9.5 0 1 0 39.2 22.3a7.9 7.9 0 0 1-5.7-14Z" fill="#FDE047" />
         )}
         <path
           d="M14 35h19.5a7.5 7.5 0 0 0 1.3-14.88A10 10 0 0 0 15.1 19a8 8 0 0 0-1.1 16Z"
@@ -679,6 +676,21 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
     window.addEventListener("sparkle:widgets-prefs-changed", onPrefsChanged);
     return () => window.removeEventListener("sparkle:widgets-prefs-changed", onPrefsChanged);
   }, []);
+
+  useEffect(() => {
+    const onOpenWidgetsBoard = () => {
+      onCloseStartMenu();
+      onCloseDirectCommand();
+      setIsSearchOpen(false);
+      setIsQuickSettingsOpen(false);
+      setIsTrayOverflowOpen(false);
+      setIsTaskViewOpen(false);
+      setHoverTooltip(null);
+      setIsWidgetsOpen(true);
+    };
+    window.addEventListener("sodium:open-widgets-board", onOpenWidgetsBoard);
+    return () => window.removeEventListener("sodium:open-widgets-board", onOpenWidgetsBoard);
+  }, [onCloseDirectCommand, onCloseStartMenu]);
 
   useEffect(() => {
     return () => {
@@ -1378,10 +1390,10 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
       },
       {
         id: "page-gallery",
-        title: "Gallery",
+        title: "Photos Gallery",
         subtitle: "Open",
         startAppId: "app-gallery",
-        keywords: "gallery bộ sưu tập ảnh video âm thanh phương tiện media photos",
+        keywords: "photos gallery bộ sưu tập ảnh video âm thanh phương tiện media photos",
         type: "page",
         onSelect: () => onLaunchRoute("/gallery"),
       },
@@ -1535,6 +1547,15 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
         type: "tool",
         logo: "/assets/aistudio/direct_command_6240d59d.png",
         onSelect: () => window.dispatchEvent(new CustomEvent("vplay:open-direct-command")),
+      },
+      {
+        id: "tool-sodver",
+        title: "About Sodium",
+        subtitle: "Run command · sodver",
+        startAppId: "app-sodver",
+        keywords: "sodver winver about sodium version os build 26335 system info",
+        type: "tool",
+        onSelect: () => onLaunchRoute("/sodver"),
       },
       {
         id: "flag-spatial-glass",
@@ -1693,13 +1714,13 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
         customAction: {
           label: "Xem",
           onAction: () => {
-            saveToHistory(media.title, { subtitle: "Gallery", type: "gallery" });
+            saveToHistory(media.title, { subtitle: "Photos Gallery", type: "gallery" });
             onLaunchRoute(`/gallery?preview=${encodeURIComponent(media.id)}`);
             setIsSearchOpen(false);
           },
         },
         onSelect: () => {
-          saveToHistory(media.title, { subtitle: "Gallery", type: "gallery" });
+          saveToHistory(media.title, { subtitle: "Photos Gallery", type: "gallery" });
           onLaunchRoute(`/gallery?preview=${encodeURIComponent(media.id)}`);
         },
       });
@@ -1757,10 +1778,10 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
       {
         id: "trending-memories",
         title: "View memories",
-        subtitle: "Gallery",
+        subtitle: "Photos Gallery",
         type: "page" as const,
         onSelect: () => {
-          saveToHistory("View memories", { subtitle: "Gallery", type: "page" });
+          saveToHistory("View memories", { subtitle: "Photos Gallery", type: "page" });
           onLaunchRoute("/gallery");
           setIsSearchOpen(false);
           setShowAllResults(false);
@@ -1855,6 +1876,14 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
         matches.push(item);
       }
     });
+
+    if (q === "sodver" || q.startsWith("sodv") || q === "winver") {
+      const sodverIdx = matches.findIndex((m) => m.id === "tool-sodver");
+      if (sodverIdx > 0) {
+        const [sodverItem] = matches.splice(sodverIdx, 1);
+        matches.unshift(sodverItem);
+      }
+    }
 
     if (matches.length === 0 && q) {
       return [
@@ -2811,6 +2840,10 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
                                     "action-toggle-sticky-widget": {
                                       route: "/notes",
                                       appId: "app-notes",
+                                    },
+                                    "tool-sodver": {
+                                      route: "/sodver",
+                                      appId: "app-sodver",
                                     },
                                   };
                                   const mapped = routeMap[item.id];
@@ -4669,22 +4702,26 @@ export const WindowsTaskbar: React.FC<WindowsTaskbarProps> = ({
                             {windowStates[taskMenu.tabId]?.isMinimized ? "Restore" : "Minimize"}
                           </span>
                         </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            onToggleMaximizeWindow(taskMenu.tabId);
-                            setTaskMenu(null);
-                          }}
-                          className="w-full h-8 px-2.5 rounded-[5px] flex items-center gap-2 text-[12px] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] cursor-pointer text-left border-none"
-                        >
-                          <Square className="w-3.5 h-3.5" />
-                          <span>
-                            {windowStates[taskMenu.tabId]?.isMaximized
-                              ? "Restore size"
-                              : "Maximize"}
-                          </span>
-                        </button>
+                        {!(
+                          taskMenu.route === "/sodver" || taskMenu.route?.startsWith("/sodver/")
+                        ) && (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              onToggleMaximizeWindow(taskMenu.tabId);
+                              setTaskMenu(null);
+                            }}
+                            className="w-full h-8 px-2.5 rounded-[5px] flex items-center gap-2 text-[12px] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] cursor-pointer text-left border-none"
+                          >
+                            <Square className="w-3.5 h-3.5" />
+                            <span>
+                              {windowStates[taskMenu.tabId]?.isMaximized
+                                ? "Restore size"
+                                : "Maximize"}
+                            </span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           role="menuitem"

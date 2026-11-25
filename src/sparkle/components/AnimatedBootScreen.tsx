@@ -132,7 +132,7 @@ export const AnimatedBootScreen: React.FC<AnimatedBootScreenProps> = ({
         style={{ fontFamily: "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif" }}
       >
         <div>Sodium 27M1 Insider Preview</div>
-        <div>Evaluation copy. Build 26335.Moment 1 (2027)</div>
+        <div>Evaluation copy. Build 26335.Milestone 1 (2027)</div>
       </div>
     </div>
   );
